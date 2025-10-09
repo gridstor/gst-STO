@@ -76,17 +76,44 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
   const [secondaryVariable, setSecondaryVariable] = useState<string>('');
   const [secondaryData, setSecondaryData] = useState<any>(null);
   const [secondaryLoading, setSecondaryLoading] = useState(false);
+  
+  // Line visibility state for primary chart
+  const [visibleLines, setVisibleLines] = useState<{[key: string]: boolean}>({
+    reference: true,
+  });
+  
+  // Line visibility state for secondary chart
+  const [secondaryVisibleLines, setSecondaryVisibleLines] = useState<{[key: string]: boolean}>({
+    reference: true,
+  });
 
-  // Available variables for match variable and secondary comparison
-  const availableVariables = ['RT Load', 'RT Net Load', 'RT LMP', 'RT Energy', 'RT Congestion'];
-
-  const variableOptions = [
-    'RT Load',
+  // All available variables
+  const allVariables = [
+    'RT Load', 
     'RT Net Load', 
-    'RT LMP',
-    'RT Energy',
-    'RT Congestion'
+    'RT LMP', 
+    'RT Energy', 
+    'RT Congestion',
+    'DA LMP',
+    'DA Load',
+    'DA Net Load'
   ];
+
+  // Match variable options - filtered based on mode
+  const matchVariableOptions = referenceMode === 'forecast' 
+    ? ['DA LMP', 'DA Load', 'DA Net Load'] // Only DA variables in forecast mode
+    : allVariables; // All variables in historical mode
+
+  // Secondary variable options - always show all variables
+  const secondaryVariableOptions = allVariables;
+
+  // Reset match variable when switching modes if current selection is not available
+  useEffect(() => {
+    if (!matchVariableOptions.includes(matchVariable)) {
+      // If current match variable is not in the filtered list, reset to first available option
+      setMatchVariable(matchVariableOptions[0] || 'RT Load');
+    }
+  }, [referenceMode]);
 
   // Load available scenarios when switching to forecast mode
   useEffect(() => {
@@ -264,6 +291,14 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
       
       setProgress('Generating visualizations...');
       setResults(data);
+      
+      // Initialize visible lines state with all lines visible
+      const initialVisibleLines: {[key: string]: boolean} = { reference: true };
+      data.similarityScores.forEach((score: SimilarityScore) => {
+        initialVisibleLines[score.day] = true;
+      });
+      setVisibleLines(initialVisibleLines);
+      
       setProgress('');
       
     } catch (err) {
@@ -321,6 +356,14 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
       }
       
       setSecondaryData(data);
+      
+      // Initialize secondary visible lines state with all lines visible
+      const initialSecondaryVisibleLines: {[key: string]: boolean} = { reference: true };
+      results?.similarityScores.forEach((score: SimilarityScore) => {
+        initialSecondaryVisibleLines[score.day] = true;
+      });
+      setSecondaryVisibleLines(initialSecondaryVisibleLines);
+      
       setProgress('');
       
     } catch (err) {
@@ -390,7 +433,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
     if (variable.includes('LMP') || variable.includes('Energy') || variable.includes('Congestion')) {
       return '$/MWh';
     } else if (variable.includes('Load')) {
-      return 'GW';
+      return 'MW';
     } else {
       return 'Value';
     }
@@ -426,6 +469,12 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
             return keyUpper.includes('RTENERGY');
           } else if (varUpper.includes('RT CONGESTION')) {
             return keyUpper.includes('RTCONG');
+          } else if (varUpper.includes('DA LMP')) {
+            return keyUpper.includes('DALMP');
+          } else if (varUpper.includes('DA LOAD') && !varUpper.includes('NET')) {
+            return keyUpper.includes('DA_DEMAND_FORECAST') || keyUpper.includes('DADEMANDFORECAST');
+          } else if (varUpper.includes('DA NET LOAD')) {
+            return keyUpper.includes('DA NET DEMAND FC') || keyUpper.includes('DANETDEMANDFC');
           }
           
           return keyUpper.includes(varUpper.replace(/\s+/g, '')) || 
@@ -458,6 +507,12 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                 return keyUpper.includes('RTENERGY');
               } else if (varUpper.includes('RT CONGESTION')) {
                 return keyUpper.includes('RTCONG');
+              } else if (varUpper.includes('DA LMP')) {
+                return keyUpper.includes('DALMP');
+              } else if (varUpper.includes('DA LOAD') && !varUpper.includes('NET')) {
+                return keyUpper.includes('DA_DEMAND_FORECAST') || keyUpper.includes('DADEMANDFORECAST');
+              } else if (varUpper.includes('DA NET LOAD')) {
+                return keyUpper.includes('DA NET DEMAND FC') || keyUpper.includes('DANETDEMANDFC');
               }
               
               return keyUpper.includes(varUpper.replace(/\s+/g, '')) || 
@@ -511,6 +566,12 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
             return keyUpper.includes('RTENERGY');
           } else if (varUpper.includes('RT CONGESTION')) {
             return keyUpper.includes('RTCONG');
+          } else if (varUpper.includes('DA LMP')) {
+            return keyUpper.includes('DALMP');
+          } else if (varUpper.includes('DA LOAD') && !varUpper.includes('NET')) {
+            return keyUpper.includes('DA_DEMAND_FORECAST') || keyUpper.includes('DADEMANDFORECAST');
+          } else if (varUpper.includes('DA NET LOAD')) {
+            return keyUpper.includes('DA NET DEMAND FC') || keyUpper.includes('DANETDEMANDFC');
           }
           
           // Fallback to original logic
@@ -547,6 +608,12 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                 return keyUpper.includes('RTENERGY');
               } else if (varUpper.includes('RT CONGESTION')) {
                 return keyUpper.includes('RTCONG');
+              } else if (varUpper.includes('DA LMP')) {
+                return keyUpper.includes('DALMP');
+              } else if (varUpper.includes('DA LOAD') && !varUpper.includes('NET')) {
+                return keyUpper.includes('DA_DEMAND_FORECAST') || keyUpper.includes('DADEMANDFORECAST');
+              } else if (varUpper.includes('DA NET LOAD')) {
+                return keyUpper.includes('DA NET DEMAND FC') || keyUpper.includes('DANETDEMANDFC');
               }
               
               return keyUpper.includes(varUpper.replace(/\s+/g, '')) || 
@@ -750,7 +817,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                 onChange={(e) => setMatchVariable(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                {variableOptions.map(option => (
+                {matchVariableOptions.map(option => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
@@ -964,6 +1031,14 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
 
             const blueColors = generateBlueGradient(results.topN);
             const yAxisLabel = getVariableUnit(results.matchVariable);
+            
+            // Toggle line visibility
+            const toggleLine = (lineKey: string) => {
+              setVisibleLines(prev => ({
+                ...prev,
+                [lineKey]: !prev[lineKey]
+              }));
+            };
 
             // Custom tooltip formatter
             const formatTooltip = (value: number, name: string) => {
@@ -978,9 +1053,45 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
             };
 
             return (
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 40, right: 30, left: 40, bottom: 80 }}>
+              <div>
+                {/* Line Toggle Controls */}
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex flex-wrap gap-3">
+                    {/* Reference Line Toggle */}
+                    <button
+                      onClick={() => toggleLine('reference')}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                        visibleLines.reference
+                          ? 'bg-red-500 text-white'
+                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Reference ({formatDate(results.referenceDate)})
+                    </button>
+                    
+                    {/* Similar Day Line Toggles */}
+                    {results.similarityScores.slice(0, topN).map((score: SimilarityScore, index: number) => (
+                      <button
+                        key={score.day}
+                        onClick={() => toggleLine(score.day)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          visibleLines[score.day]
+                            ? 'text-white'
+                            : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                        style={{
+                          backgroundColor: visibleLines[score.day] ? blueColors[index] : undefined
+                        }}
+                      >
+                        #{score.rank} ({formatDate(score.day)})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="h-96">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 40, right: 30, left: 40, bottom: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis 
                       dataKey="hour" 
@@ -1013,6 +1124,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                       dot={false}
                       name="Reference"
                       connectNulls={false}
+                      hide={!visibleLines.reference}
                     />
                     
                     {/* Similar days lines (blue gradient) */}
@@ -1026,10 +1138,12 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                         dot={false}
                         name={`${score.rank} (${formatDate(score.day)})`}
                         connectNulls={false}
+                        hide={!visibleLines[score.day]}
                       />
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
+                </div>
               </div>
             );
           })()
@@ -1069,7 +1183,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                 }`}
               >
                 <option value="">Select variable...</option>
-                {availableVariables
+                {secondaryVariableOptions
                   .filter(variable => variable !== matchVariable)
                   .map(variable => (
                     <option key={variable} value={variable}>
@@ -1113,6 +1227,14 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
 
               const blueColors = generateBlueGradient(topN);
               
+              // Toggle line visibility for secondary chart
+              const toggleSecondaryLine = (lineKey: string) => {
+                setSecondaryVisibleLines(prev => ({
+                  ...prev,
+                  [lineKey]: !prev[lineKey]
+                }));
+              };
+              
               console.log('🔍 Secondary chart data:', chartData.length, 'points');
               if (chartData.length > 0) {
                 console.log('🔍 First hour keys:', Object.keys(chartData[0]));
@@ -1120,9 +1242,45 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
               }
 
               return (
-            
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
+                <div>
+                  {/* Line Toggle Controls for Secondary Chart */}
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex flex-wrap gap-3">
+                      {/* Reference Line Toggle */}
+                      <button
+                        onClick={() => toggleSecondaryLine('reference')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          secondaryVisibleLines.reference
+                            ? 'bg-red-500 text-white'
+                            : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        Reference ({formatDate(referenceDate)})
+                      </button>
+                      
+                      {/* Similar Day Line Toggles */}
+                      {results.similarityScores.slice(0, topN).map((score: SimilarityScore, index: number) => (
+                        <button
+                          key={score.day}
+                          onClick={() => toggleSecondaryLine(score.day)}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            secondaryVisibleLines[score.day]
+                              ? 'text-white'
+                              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                          }`}
+                          style={{
+                            backgroundColor: secondaryVisibleLines[score.day] ? blueColors[index] : undefined
+                          }}
+                        >
+                          #{score.rank} ({formatDate(score.day)})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="h-96">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
                 data={chartData}
                 margin={{ top: 20, right: 30, left: 60, bottom: 80 }}
               >
@@ -1164,6 +1322,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                   strokeWidth={3}
                   dot={false}
                   name="Reference"
+                  hide={!secondaryVisibleLines.reference}
                 />
                 
                 {/* Similar Days Lines - Use same colors as main chart */}
@@ -1191,11 +1350,14 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                       strokeWidth={2}
                       dot={false}
                       name={`${score.rank} (${formatDate(score.day)})`}
+                      hide={!secondaryVisibleLines[score.day]}
                     />
                   ));
                 })()}
               </LineChart>
             </ResponsiveContainer>
+                  </div>
+                </div>
               );
             })()}
           </div>

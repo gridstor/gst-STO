@@ -12,6 +12,9 @@ const LIKEDAY_MAP: { [key: string]: string } = {
   "RT LMP": 'RTLMP:20000001321',
   "RT Energy": 'RTENERGY:20000001321',
   "RT Congestion": 'RTCONG:20000001321',
+  "DA LMP": 'DALMP:20000001321',
+  "DA Load": 'DA_DEMAND_FORECAST:10000328798',
+  "DA Net Load": 'DA%20NET%20DEMAND%20FC:10000328798:today+48hours',
 };
 
 interface SecondaryRequest {
@@ -207,17 +210,9 @@ function parseHtmlTable(html: string): YESEnergyDataPoint[] {
 
 // Convert YES Energy units to match our forecast data units
 function convertYESEnergyUnits(rowData: any): YESEnergyDataPoint {
-  const converted = { ...rowData };
-  
-  // Convert Load and Net Load from MW to GW for consistency with forecast data
-  Object.keys(converted).forEach(key => {
-    if (typeof converted[key] === 'number' && 
-        (key.includes('RTLOAD') || key.includes('RTLOAD_NET_OF_RENEWABLES'))) {
-      converted[key] = converted[key] / 1000; // Convert MW to GW
-    }
-  });
-  
-  return converted;
+  // No conversion needed - YES Energy already returns data in correct units
+  // Load values are in MW, LMP values are in $/MWh
+  return rowData;
 }
 
 // Helper functions for smart parsing
@@ -337,7 +332,7 @@ async function fetchForecastData(
           DATETIME: `${targetDate.toISOString().split('T')[0]} ${String(hour).padStart(2, '0')}:00:00`,
           MARKETDAY: targetDate.toISOString().split('T')[0],
           HOURENDING: parseInt(hour),
-          'CAISO (RTLOAD)': loadByHour[parseInt(hour)] / 1000, // Convert MW to GW
+          'CAISO (RTLOAD)': loadByHour[parseInt(hour)], // Keep in MW
         }));
         
       case 'RT Net Load':
@@ -392,13 +387,132 @@ async function fetchForecastData(
           const hourNum = parseInt(hour);
           const demandMW = demandByHour[hourNum];
           const renewableMW = renewableByHour[hourNum] || 0;
-          const netLoadGW = (demandMW - renewableMW) / 1000; // Convert MW to GW
+          const netLoadMW = demandMW - renewableMW; // Keep in MW
           
           return {
             DATETIME: `${targetDate.toISOString().split('T')[0]} ${String(hourNum).padStart(2, '0')}:00:00`,
             MARKETDAY: targetDate.toISOString().split('T')[0],
             HOURENDING: hourNum,
-            'CAISO (RTLOAD_NET_OF_RENEWABLES)': netLoadGW,
+            'CAISO (RTLOAD_NET_OF_RENEWABLES)': netLoadMW,
+          };
+        });
+        
+      case 'DA LMP':
+        // Same as RT LMP - use Dayzer's LMP forecast (energy + congestion + losses)
+        const daLmpResults = await prisma.results_units.findMany({
+          where: {
+            scenarioid: scenarioId,
+            unitid: 66038,
+            Date: targetDate,
+          },
+          orderBy: { Hour: 'asc' },
+          select: {
+            Date: true,
+            Hour: true,
+            energy: true,
+            congestion: true,
+            losses: true,
+          },
+        });
+        
+        return daLmpResults.map(row => ({
+          DATETIME: `${row.Date.toISOString().split('T')[0]} ${String(row.Hour).padStart(2, '0')}:00:00`,
+          MARKETDAY: row.Date.toISOString().split('T')[0],
+          HOURENDING: row.Hour,
+          'GOLETA_6_N100 (DALMP)': (row.energy || 0) + (row.congestion || 0) + (row.losses || 0),
+        }));
+        
+      case 'DA Load':
+        // Use Dayzer's load forecast (demandmw from zone_demand)
+        const daLoadResults = await prisma.zone_demand.findMany({
+          where: {
+            scenarioid: scenarioId,
+            Date: targetDate,
+          },
+          orderBy: { Hour: 'asc' },
+          select: {
+            Date: true,
+            Hour: true,
+            demandmw: true,
+          },
+        });
+        
+        // Aggregate by hour
+        const daLoadByHour: { [hour: number]: number } = {};
+        daLoadResults.forEach(row => {
+          if (!daLoadByHour[row.Hour]) {
+            daLoadByHour[row.Hour] = 0;
+          }
+          daLoadByHour[row.Hour] += (row.demandmw || 0);
+        });
+        
+        return Object.keys(daLoadByHour).map(hour => ({
+          DATETIME: `${targetDate.toISOString().split('T')[0]} ${String(hour).padStart(2, '0')}:00:00`,
+          MARKETDAY: targetDate.toISOString().split('T')[0],
+          HOURENDING: parseInt(hour),
+          'CAISO (DA_DEMAND_FORECAST)': daLoadByHour[parseInt(hour)], // Keep in MW
+        }));
+        
+      case 'DA Net Load':
+        // Use Dayzer's net load forecast (demand - renewables)
+        const daNetLoadDemandResults = await prisma.zone_demand.findMany({
+          where: {
+            scenarioid: scenarioId,
+            Date: targetDate,
+          },
+          orderBy: { Hour: 'asc' },
+          select: {
+            Date: true,
+            Hour: true,
+            demandmw: true,
+          },
+        });
+        
+        const daRenewableResults = await prisma.results_units.findMany({
+          where: {
+            scenarioid: scenarioId,
+            Date: targetDate,
+            OR: [
+              { fuelname: 'sun' },
+              { fuelname: 'Sun' },
+              { fuelname: 'wind' },
+              { fuelname: 'Wind' }
+            ]
+          },
+          orderBy: { Hour: 'asc' },
+          select: {
+            Date: true,
+            Hour: true,
+            fuelname: true,
+            generationmw: true,
+          },
+        });
+        
+        // Aggregate by hour
+        const daDemandByHour: { [hour: number]: number } = {};
+        const daRenewableByHour: { [hour: number]: number } = {};
+        
+        daNetLoadDemandResults.forEach(row => {
+          if (!daDemandByHour[row.Hour]) daDemandByHour[row.Hour] = 0;
+          daDemandByHour[row.Hour] += (row.demandmw || 0);
+        });
+        
+        daRenewableResults.forEach(row => {
+          if (!daRenewableByHour[row.Hour]) daRenewableByHour[row.Hour] = 0;
+          daRenewableByHour[row.Hour] += (row.generationmw || 0);
+        });
+        
+        return Object.keys(daDemandByHour).map(hour => {
+          const hourNum = parseInt(hour);
+          const demandMW = daDemandByHour[hourNum];
+          const renewableMW = daRenewableByHour[hourNum] || 0;
+          const netLoadMW = demandMW - renewableMW; // Keep in MW
+          
+          return {
+            DATETIME: `${targetDate.toISOString().split('T')[0]} ${String(hourNum).padStart(2, '0')}:00:00`,
+            MARKETDAY: targetDate.toISOString().split('T')[0],
+            HOURENDING: hourNum,
+            'CAISO (DA NET DEMAND FC)': netLoadMW,
           };
         });
         
