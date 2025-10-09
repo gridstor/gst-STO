@@ -1,0 +1,73 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import CombinedLoadChart from '../../components/common/CombinedLoadChart.tsx';
+import CombinedRenewablesChart from '../../components/common/CombinedRenewablesChart.tsx';
+import CombinedLMPChart from '../../components/common/CombinedLMPChart.tsx';
+import CombinedWeatherChart from '../../components/common/CombinedWeatherChart.tsx';
+import RenewableForecastAccuracy from '../../components/common/RenewableForecastAccuracy.tsx';
+import ScenarioDatePicker from '../../components/common/ScenarioDatePicker.tsx';
+---
+
+<Layout title="Weekly Recap">
+  <!-- Page Title -->
+  <div class="text-center mb-8">
+    <h1 class="text-4xl font-bold text-gray-900">Market Operations Outlook</h1>
+  </div>
+  
+  <!-- Scenario Date Picker -->
+  <ScenarioDatePicker client:load />
+  
+  <div class="space-y-8">
+
+    <!-- Pricing Section Header -->
+    <div class="flex items-center mb-6">
+      <div class="w-1 h-8 bg-green-600 rounded-r mr-4"></div>
+      <h2 class="text-3xl font-semibold text-gray-800">Pricing</h2>
+    </div>
+
+    <!-- LMP Forecast Section -->
+    <div class="bg-white border border-green-600 rounded-xl shadow-sm p-8 max-w-7xl mx-auto">
+      <!-- Combined LMP Forecast and Last Week -->
+      <div class="space-y-6">
+        <CombinedLMPChart client:load />
+      </div>
+    </div>
+    
+    <!-- Fundamentals Section Header -->
+    <div class="flex items-center mb-6">
+      <div class="w-1 h-8 bg-blue-600 rounded-r mr-4"></div>
+      <h2 class="text-3xl font-semibold text-gray-800">Fundamentals</h2>
+    </div>
+    
+    <!-- Load Forecast Section -->
+    <div class="bg-white border border-blue-600 rounded-xl shadow-sm p-8 max-w-7xl mx-auto">
+      <!-- Combined Load Forecast and Last Week -->
+      <div class="space-y-6">
+        <CombinedLoadChart client:load />
+      </div>
+    </div>
+
+    <!-- Renewables Forecast Section -->
+    <div class="bg-white border border-blue-600 rounded-xl shadow-sm p-8 max-w-7xl mx-auto">
+      <!-- Combined Renewables Forecast and Last Week -->
+      <div class="space-y-6">
+        <CombinedRenewablesChart client:load />
+      </div>
+    </div>
+    
+    <!-- Weather Section Header -->
+    <div class="flex items-center mb-6">
+      <div class="w-1 h-8 bg-orange-600 rounded-r mr-4"></div>
+      <h2 class="text-3xl font-semibold text-gray-800">Weather</h2>
+    </div>
+    
+    <!-- Weather Section Content -->
+    <div class="bg-white border border-orange-600 rounded-xl shadow-sm p-8 max-w-7xl mx-auto">
+      <!-- Combined Weather Forecast and Last Week -->
+      <div class="space-y-6">
+        <CombinedWeatherChart client:load />
+      </div>
+    </div>
+
+  </div>
+</Layout>

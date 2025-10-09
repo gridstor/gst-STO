@@ -13,6 +13,57 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
+// Monthly charging restrictions (indexed by month 0-11 for Jan-Dec)
+// Based on table: HB 0 = 7PM-1AM, HB 1-6 = 1AM-7AM, HB 7-9 = 7AM-10AM, HB 10-18 = 10AM-7PM, HB 19-23 = 7PM-1AM
+const MONTHLY_CHARGING_RESTRICTIONS: { [month: number]: number[] } = {
+  0: [8.4, 39.9, 39.9, 39.9, 39.9, 39.9, 39.9, 2.6, 2.6, 2.6, 6.6, 6.6, 6.6, 6.6, 6.6, 6.6, 6.6, 6.6, 6.6, 8.4, 8.4, 8.4, 8.4, 8.4], // Jan
+  1: [6.3, 40.4, 40.4, 40.4, 40.4, 40.4, 40.4, 4.7, 4.7, 4.7, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 6.3, 6.3, 6.3, 6.3, 6.3], // Feb
+  2: [4.7, 33.9, 33.9, 33.9, 33.9, 33.9, 33.9, 7.4, 7.4, 7.4, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 4.7, 4.7, 4.7, 4.7, 4.7], // Mar
+  3: [25.4, 29.4, 29.4, 29.4, 29.4, 29.4, 29.4, 15.3, 15.3, 15.3, 24.6, 24.6, 24.6, 24.6, 24.6, 24.6, 24.6, 24.6, 24.6, 25.4, 25.4, 25.4, 25.4, 25.4], // Apr
+  4: [28.9, 37.1, 37.1, 37.1, 37.1, 37.1, 37.1, 25.5, 25.5, 25.5, 24.4, 24.4, 24.4, 24.4, 24.4, 24.4, 24.4, 24.4, 24.4, 28.9, 28.9, 28.9, 28.9, 28.9], // May
+  5: [30.8, 45.3, 45.3, 45.3, 45.3, 45.3, 45.3, 19.6, 19.6, 19.6, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 30.8, 30.8, 30.8, 30.8, 30.8], // Jun
+  6: [5.6, 37.4, 37.4, 37.4, 37.4, 37.4, 37.4, 3.5, 3.5, 3.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5.6, 5.6, 5.6, 5.6, 5.6], // Jul
+  7: [0.5, 36.0, 36.0, 36.0, 36.0, 36.0, 36.0, 1.7, 1.7, 1.7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5], // Aug
+  8: [6.1, 34.4, 34.4, 34.4, 34.4, 34.4, 34.4, 2.6, 2.6, 2.6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6.1, 6.1, 6.1, 6.1, 6.1], // Sep
+  9: [11.0, 41.3, 41.3, 41.3, 41.3, 41.3, 41.3, 11.0, 11.0, 11.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11.0, 11.0, 11.0, 11.0, 11.0], // Oct
+  10: [14.3, 40.1, 40.1, 40.1, 40.1, 40.1, 40.1, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 14.3, 14.3, 14.3, 14.3, 14.3], // Nov
+  11: [8.2, 42.3, 42.3, 42.3, 42.3, 42.3, 42.3, 5.2, 5.2, 5.2, 7.1, 7.1, 7.1, 7.1, 7.1, 7.1, 7.1, 7.1, 7.1, 8.2, 8.2, 8.2, 8.2, 8.2], // Dec
+};
+
+// Helper function to determine dominant month in a date range
+function getDominantMonth(startDate: Date, endDate: Date): number {
+  const monthCounts: { [month: number]: number } = {};
+  
+  // Count days in each month
+  const current = new Date(startDate);
+  while (current <= endDate) {
+    const month = current.getMonth();
+    monthCounts[month] = (monthCounts[month] || 0) + 1;
+    current.setDate(current.getDate() + 1);
+  }
+  
+  // Find month with most days
+  let dominantMonth = startDate.getMonth();
+  let maxDays = 0;
+  
+  Object.entries(monthCounts).forEach(([month, days]) => {
+    if (days > maxDays) {
+      maxDays = days;
+      dominantMonth = parseInt(month);
+    }
+  });
+  
+  console.log('📅 Month day counts:', monthCounts);
+  console.log('📅 Dominant month:', dominantMonth, '(', new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' }), ')');
+  
+  return dominantMonth;
+}
+
+// Helper function to get charging restrictions for a specific month
+function getChargingRestrictionsForMonth(month: number): number[] {
+  return MONTHLY_CHARGING_RESTRICTIONS[month] || MONTHLY_CHARGING_RESTRICTIONS[9]; // Default to October if not found
+}
+
 interface HourlyData {
   Date: Date;
   Hour: number;
@@ -62,6 +113,8 @@ interface TB26Result {
     lastWeek: string;
     lastYear: string;
   };
+  chargingRestrictions: number[];
+  currentMonth: string;
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -129,6 +182,11 @@ export const GET: APIRoute = async ({ request }) => {
     // Calculate Last Year (new logic)
     const lastYearResults = await calculateLastWeekTB26(secondaryPool, lastYearStart, lastYearEnd);
 
+    // Get current month's charging restrictions for display
+    const currentMonthIndex = today.getMonth();
+    const chargingRestrictions = getChargingRestrictionsForMonth(currentMonthIndex);
+    const currentMonth = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
     const result: TB26Result = {
       thisWeek: thisWeekResults,
       lastWeek: lastWeekResults,
@@ -138,7 +196,9 @@ export const GET: APIRoute = async ({ request }) => {
         thisWeek: `${thisWeekStart.toISOString().split('T')[0]} to ${thisWeekEnd.toISOString().split('T')[0]}`,
         lastWeek: `${lastWeekStart.toISOString().split('T')[0]} to ${lastWeekEnd.toISOString().split('T')[0]}`,
         lastYear: `${lastYearStart.toISOString().split('T')[0]} to ${lastYearEnd.toISOString().split('T')[0]}`
-      }
+      },
+      chargingRestrictions: chargingRestrictions,
+      currentMonth: currentMonth
     };
 
     console.log('Final TB2.6 Results:', {
@@ -168,8 +228,14 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-// This Week calculation (existing logic moved to function)
+// This Week calculation with charging restrictions
 async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDate: Date) {
+  // Determine dominant month for this week
+  const dominantMonth = getDominantMonth(startDate, endDate);
+  const chargingRestrictions = getChargingRestrictionsForMonth(dominantMonth);
+  
+  console.log(`🔋 This Week: Using ${new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' })} charging restrictions`);
+
   // Fetch data from results_units for Goleta (unitid = 66038)
   const results = await prisma.results_units.findMany({
     where: {
@@ -226,7 +292,7 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
 
   console.log('Days found:', Object.keys(dataByDate));
 
-  // Calculate daily revenues
+  // Calculate daily revenues with charging restrictions
   const dailyRevenues: DailyRevenue[] = [];
 
   Object.keys(dataByDate).forEach(dateString => {
@@ -242,37 +308,50 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
 
     // Battery specs
     const batteryCapacity = 160; // MWh
-    const powerLimit = 60; // MW
     const efficiency = 0.86;
 
-    // Charging phase (cheapest hours)
-    const charge1 = { hour: sortedByLMP[0], amount: 60 }; // Cheapest
-    const charge2 = { hour: sortedByLMP[1], amount: 60 }; // 2nd cheapest
-    const charge3 = { hour: sortedByLMP[2], amount: 40 }; // 3rd cheapest, remainder
-    
-    // Available energy to discharge
+    // NEW CHARGING LOGIC WITH RESTRICTIONS
+    let totalCost = 0;
+    let energyCost = 0;
+    let congestionCost = 0;
+    let mwBought = 0;
+    let buyIndex = 0;
+
+    console.log(`🔋 Charging for ${dateString} (This Week Forecast):`);
+
+    // Iteratively buy energy from cheapest hours until we reach capacity
+    while (mwBought < batteryCapacity && buyIndex < sortedByLMP.length) {
+      const hour = sortedByLMP[buyIndex];
+      const hourEnding = hour.Hour;
+      const hourBeginning = hourEnding === 1 ? 0 : hourEnding - 1; // HE 1 -> HB 0, HE 2 -> HB 1, etc.
+      
+      // Get charging restriction for this hour
+      let restriction = chargingRestrictions[hourBeginning];
+      
+      // Don't exceed battery capacity
+      if (mwBought + restriction > batteryCapacity) {
+        restriction = batteryCapacity - mwBought;
+      }
+
+      // Add to costs
+      totalCost += restriction * hour.lmp;
+      energyCost += restriction * (hour.energy || 0);
+      congestionCost += restriction * (hour.congestion || 0);
+      
+      console.log(`  HE ${hourEnding} (HB ${hourBeginning}): Buy ${restriction.toFixed(1)} MW @ $${hour.lmp.toFixed(2)}/MWh (restriction: ${chargingRestrictions[hourBeginning]} MW)`);
+      
+      mwBought += restriction;
+      buyIndex++;
+    }
+
+    console.log(`  Total charged: ${mwBought.toFixed(1)} MW, Total cost: $${totalCost.toFixed(2)}`);
+
+    // DISCHARGING LOGIC (unchanged - still use 3 most expensive hours)
     const availableEnergy = batteryCapacity * efficiency; // 137.6 MWh
     
-    // Discharging phase (most expensive hours)
     const discharge1 = { hour: sortedByLMP[23], amount: 60 }; // Most expensive
     const discharge2 = { hour: sortedByLMP[22], amount: 60 }; // 2nd most expensive
     const discharge3 = { hour: sortedByLMP[21], amount: availableEnergy - 120 }; // 3rd most expensive, remainder (17.6)
-
-    // Calculate costs (charging)
-    const totalCost = 
-      charge1.amount * charge1.hour.lmp +
-      charge2.amount * charge2.hour.lmp +
-      charge3.amount * charge3.hour.lmp;
-
-    const energyCost = 
-      charge1.amount * (charge1.hour.energy || 0) +
-      charge2.amount * (charge2.hour.energy || 0) +
-      charge3.amount * (charge3.hour.energy || 0);
-
-    const congestionCost = 
-      charge1.amount * (charge1.hour.congestion || 0) +
-      charge2.amount * (charge2.hour.congestion || 0) +
-      charge3.amount * (charge3.hour.congestion || 0);
 
     // Calculate revenues (discharging)
     const totalRevenue = 
@@ -290,6 +369,8 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
       discharge2.amount * (discharge2.hour.congestion || 0) +
       discharge3.amount * (discharge3.hour.congestion || 0);
 
+    console.log(`  Total revenue: $${totalRevenue.toFixed(2)}, Net: $${(totalRevenue - totalCost).toFixed(2)}`);
+
     // Net daily revenues
     dailyRevenues.push({
       date: dateString,
@@ -298,7 +379,7 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
       congestionRevenue: congestionRevenue - congestionCost,
     });
 
-    console.log(`${dateString}: Total=${totalRevenue - totalCost}, Energy=${energyRevenue - energyCost}, Congestion=${congestionRevenue - congestionCost}`);
+    console.log(`${dateString}: Total=${(totalRevenue - totalCost).toFixed(2)}, Energy=${(energyRevenue - energyCost).toFixed(2)}, Congestion=${(congestionRevenue - congestionCost).toFixed(2)}`);
   });
 
   // Calculate weekly totals
@@ -317,6 +398,12 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
   const energyTB26 = (dailyAvgEnergy / (60 * 1000)) * 30.25;
   const congestionTB26 = (dailyAvgCongestion / (60 * 1000)) * 30.25;
 
+  console.log('🔋 This Week TB2,6 with restrictions:', {
+    totalTB26: totalTB26.toFixed(2),
+    energyTB26: energyTB26.toFixed(2),
+    congestionTB26: congestionTB26.toFixed(2)
+  });
+
   return {
     totalTB26,
     energyTB26,
@@ -326,6 +413,12 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
 }
 
 async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date) {
+  // Determine dominant month for this week
+  const dominantMonth = getDominantMonth(startDate, endDate);
+  const chargingRestrictions = getChargingRestrictionsForMonth(dominantMonth);
+  
+  console.log(`🔋 Last Week/Year: Using ${new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' })} charging restrictions`);
+
   // Adjust query to capture boundary hours - extend range by 1 day on each side
   const queryStartDate = new Date(startDate);
   queryStartDate.setDate(queryStartDate.getDate() - 1);
@@ -441,7 +534,7 @@ async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date)
   console.log('Processed historical data count:', processedData.length);
   console.log('Sample processed data:', processedData.slice(0, 3));
 
-  // Group by date - Back to normal grouping (no Hour 24 shifting)
+  // Group by date
   const dataByDate: { [dateString: string]: HourlyData[] } = {};
   processedData.forEach(row => {
     const dateKey = row.Date.toISOString().split('T')[0];
@@ -453,7 +546,7 @@ async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date)
 
   console.log('Days found:', Object.keys(dataByDate));
 
-  // Calculate daily revenues
+  // Calculate daily revenues with charging restrictions
   const dailyRevenues: DailyRevenue[] = [];
 
   Object.keys(dataByDate).forEach(dateString => {
@@ -469,37 +562,50 @@ async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date)
 
     // Battery specs
     const batteryCapacity = 160; // MWh
-    const powerLimit = 60; // MW
     const efficiency = 0.86;
 
-    // Charging phase (cheapest hours)
-    const charge1 = { hour: sortedByLMP[0], amount: 60 }; // Cheapest
-    const charge2 = { hour: sortedByLMP[1], amount: 60 }; // 2nd cheapest
-    const charge3 = { hour: sortedByLMP[2], amount: 40 }; // 3rd cheapest, remainder
-    
-    // Available energy to discharge
+    // NEW CHARGING LOGIC WITH RESTRICTIONS
+    let totalCost = 0;
+    let energyCost = 0;
+    let congestionCost = 0;
+    let mwBought = 0;
+    let buyIndex = 0;
+
+    console.log(`🔋 Charging for ${dateString}:`);
+
+    // Iteratively buy energy from cheapest hours until we reach capacity
+    while (mwBought < batteryCapacity && buyIndex < sortedByLMP.length) {
+      const hour = sortedByLMP[buyIndex];
+      const hourEnding = hour.Hour;
+      const hourBeginning = hourEnding === 1 ? 0 : hourEnding - 1; // HE 1 -> HB 0, HE 2 -> HB 1, etc.
+      
+      // Get charging restriction for this hour
+      let restriction = chargingRestrictions[hourBeginning];
+      
+      // Don't exceed battery capacity
+      if (mwBought + restriction > batteryCapacity) {
+        restriction = batteryCapacity - mwBought;
+      }
+
+      // Add to costs
+      totalCost += restriction * hour.lmp;
+      energyCost += restriction * (hour.energy || 0);
+      congestionCost += restriction * (hour.congestion || 0);
+      
+      console.log(`  HE ${hourEnding} (HB ${hourBeginning}): Buy ${restriction.toFixed(1)} MW @ $${hour.lmp.toFixed(2)}/MWh (restriction: ${chargingRestrictions[hourBeginning]} MW)`);
+      
+      mwBought += restriction;
+      buyIndex++;
+    }
+
+    console.log(`  Total charged: ${mwBought.toFixed(1)} MW, Total cost: $${totalCost.toFixed(2)}`);
+
+    // DISCHARGING LOGIC (unchanged - still use 3 most expensive hours)
     const availableEnergy = batteryCapacity * efficiency; // 137.6 MWh
     
-    // Discharging phase (most expensive hours)
     const discharge1 = { hour: sortedByLMP[23], amount: 60 }; // Most expensive
     const discharge2 = { hour: sortedByLMP[22], amount: 60 }; // 2nd most expensive
     const discharge3 = { hour: sortedByLMP[21], amount: availableEnergy - 120 }; // 3rd most expensive, remainder (17.6)
-
-    // Calculate costs (charging)
-    const totalCost = 
-      charge1.amount * charge1.hour.lmp +
-      charge2.amount * charge2.hour.lmp +
-      charge3.amount * charge3.hour.lmp;
-
-    const energyCost = 
-      charge1.amount * (charge1.hour.energy || 0) +
-      charge2.amount * (charge2.hour.energy || 0) +
-      charge3.amount * (charge3.hour.energy || 0);
-
-    const congestionCost = 
-      charge1.amount * (charge1.hour.congestion || 0) +
-      charge2.amount * (charge2.hour.congestion || 0) +
-      charge3.amount * (charge3.hour.congestion || 0);
 
     // Calculate revenues (discharging)
     const totalRevenue = 
@@ -517,6 +623,8 @@ async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date)
       discharge2.amount * (discharge2.hour.congestion || 0) +
       discharge3.amount * (discharge3.hour.congestion || 0);
 
+    console.log(`  Total revenue: $${totalRevenue.toFixed(2)}, Net: $${(totalRevenue - totalCost).toFixed(2)}`);
+
     // Net daily revenues
     dailyRevenues.push({
       date: dateString,
@@ -525,7 +633,7 @@ async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date)
       congestionRevenue: congestionRevenue - congestionCost,
     });
 
-    console.log(`${dateString}: Total=${totalRevenue - totalCost}, Energy=${energyRevenue - energyCost}, Congestion=${congestionRevenue - congestionCost}`);
+    console.log(`${dateString}: Total=${(totalRevenue - totalCost).toFixed(2)}, Energy=${(energyRevenue - energyCost).toFixed(2)}, Congestion=${(congestionRevenue - congestionCost).toFixed(2)}`);
   });
 
   // Calculate weekly totals
@@ -543,6 +651,12 @@ async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date)
   const totalTB26 = (dailyAvgTotal / (60 * 1000)) * 30.25;
   const energyTB26 = (dailyAvgEnergy / (60 * 1000)) * 30.25;
   const congestionTB26 = (dailyAvgCongestion / (60 * 1000)) * 30.25;
+
+  console.log('🔋 Last Week TB2,6 with restrictions:', {
+    totalTB26: totalTB26.toFixed(2),
+    energyTB26: energyTB26.toFixed(2),
+    congestionTB26: congestionTB26.toFixed(2)
+  });
 
   return {
     totalTB26,

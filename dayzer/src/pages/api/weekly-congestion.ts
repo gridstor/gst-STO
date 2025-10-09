@@ -12,6 +12,57 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
+// Monthly charging restrictions (indexed by month 0-11 for Jan-Dec)
+// Same as TB2,6 calculation
+const MONTHLY_CHARGING_RESTRICTIONS: { [month: number]: number[] } = {
+  0: [8.4, 39.9, 39.9, 39.9, 39.9, 39.9, 39.9, 2.6, 2.6, 2.6, 6.6, 6.6, 6.6, 6.6, 6.6, 6.6, 6.6, 6.6, 6.6, 8.4, 8.4, 8.4, 8.4, 8.4], // Jan
+  1: [6.3, 40.4, 40.4, 40.4, 40.4, 40.4, 40.4, 4.7, 4.7, 4.7, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 6.3, 6.3, 6.3, 6.3, 6.3], // Feb
+  2: [4.7, 33.9, 33.9, 33.9, 33.9, 33.9, 33.9, 7.4, 7.4, 7.4, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 4.7, 4.7, 4.7, 4.7, 4.7], // Mar
+  3: [25.4, 29.4, 29.4, 29.4, 29.4, 29.4, 29.4, 15.3, 15.3, 15.3, 24.6, 24.6, 24.6, 24.6, 24.6, 24.6, 24.6, 24.6, 24.6, 25.4, 25.4, 25.4, 25.4, 25.4], // Apr
+  4: [28.9, 37.1, 37.1, 37.1, 37.1, 37.1, 37.1, 25.5, 25.5, 25.5, 24.4, 24.4, 24.4, 24.4, 24.4, 24.4, 24.4, 24.4, 24.4, 28.9, 28.9, 28.9, 28.9, 28.9], // May
+  5: [30.8, 45.3, 45.3, 45.3, 45.3, 45.3, 45.3, 19.6, 19.6, 19.6, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 30.8, 30.8, 30.8, 30.8, 30.8], // Jun
+  6: [5.6, 37.4, 37.4, 37.4, 37.4, 37.4, 37.4, 3.5, 3.5, 3.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5.6, 5.6, 5.6, 5.6, 5.6], // Jul
+  7: [0.5, 36.0, 36.0, 36.0, 36.0, 36.0, 36.0, 1.7, 1.7, 1.7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5], // Aug
+  8: [6.1, 34.4, 34.4, 34.4, 34.4, 34.4, 34.4, 2.6, 2.6, 2.6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6.1, 6.1, 6.1, 6.1, 6.1], // Sep
+  9: [11.0, 41.3, 41.3, 41.3, 41.3, 41.3, 41.3, 11.0, 11.0, 11.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11.0, 11.0, 11.0, 11.0, 11.0], // Oct
+  10: [14.3, 40.1, 40.1, 40.1, 40.1, 40.1, 40.1, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 11.0, 14.3, 14.3, 14.3, 14.3, 14.3], // Nov
+  11: [8.2, 42.3, 42.3, 42.3, 42.3, 42.3, 42.3, 5.2, 5.2, 5.2, 7.1, 7.1, 7.1, 7.1, 7.1, 7.1, 7.1, 7.1, 7.1, 8.2, 8.2, 8.2, 8.2, 8.2], // Dec
+};
+
+// Helper function to determine dominant month in a date range
+function getDominantMonth(startDate: Date, endDate: Date): number {
+  const monthCounts: { [month: number]: number } = {};
+  
+  // Count days in each month
+  const current = new Date(startDate);
+  while (current <= endDate) {
+    const month = current.getMonth();
+    monthCounts[month] = (monthCounts[month] || 0) + 1;
+    current.setDate(current.getDate() + 1);
+  }
+  
+  // Find month with most days
+  let dominantMonth = startDate.getMonth();
+  let maxDays = 0;
+  
+  Object.entries(monthCounts).forEach(([month, days]) => {
+    if (days > maxDays) {
+      maxDays = days;
+      dominantMonth = parseInt(month);
+    }
+  });
+  
+  console.log('📅 Congestion: Month day counts:', monthCounts);
+  console.log('📅 Congestion: Dominant month:', dominantMonth, '(', new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' }), ')');
+  
+  return dominantMonth;
+}
+
+// Helper function to get charging restrictions for a specific month
+function getChargingRestrictionsForMonth(month: number): number[] {
+  return MONTHLY_CHARGING_RESTRICTIONS[month] || MONTHLY_CHARGING_RESTRICTIONS[9]; // Default to October if not found
+}
+
 interface HourlyLMPData {
   Date: Date;
   Hour: number;
@@ -148,6 +199,12 @@ async function calculateWeeklyCongestion(
   
   console.log('Calculating weekly congestion for scenario:', scenarioId);
   
+  // Determine dominant month for this week to get appropriate charging restrictions
+  const dominantMonth = getDominantMonth(startDate, endDate);
+  const chargingRestrictions = getChargingRestrictionsForMonth(dominantMonth);
+  
+  console.log(`🔋 Weekly Congestion: Using ${new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' })} charging restrictions`);
+  
   // Step 1: Fetch LMP data from results_units (unitid = 66038)
   const lmpResultsRaw = await prisma.$queryRaw`
     SELECT "Date", "Hour", lmp
@@ -218,22 +275,41 @@ async function calculateWeeklyCongestion(
       continue;
     }
 
-    // Sort by LMP to find top 2 and bottom 2 hours
-    const sortedByLMP = [...dailyLmpData].sort((a, b) => b.lmp - a.lmp);
-    const topHours = [sortedByLMP[0].Hour, sortedByLMP[1].Hour]; // Highest LMP
-    const bottomHours = [sortedByLMP[22].Hour, sortedByLMP[23].Hour]; // Lowest LMP
+    // Filter hours based on charging restrictions (only include hours where charging > 0)
+    const availableHours = dailyLmpData.filter(hour => {
+      const hourEnding = hour.Hour;
+      const hourBeginning = hourEnding === 1 ? 0 : hourEnding - 1; // HE 1 -> HB 0
+      const restriction = chargingRestrictions[hourBeginning];
+      return restriction > 0; // Only include hours where charging is allowed
+    });
 
-    console.log(`${dateString}: Detailed LMP breakdown:`);
-    console.log(`  All 24 hours sorted by LMP (descending):`);
+    console.log(`${dateString}: Total hours: 24, Available for charging: ${availableHours.length}`);
+
+    // Sort available hours by LMP to find top 2 and bottom 2
+    const sortedByLMP = [...availableHours].sort((a, b) => b.lmp - a.lmp);
+    
+    if (sortedByLMP.length < 4) {
+      console.warn(`${dateString}: Not enough available hours (${sortedByLMP.length}) to identify top/bottom 2`);
+      continue; // Skip this day
+    }
+
+    const topHours = [sortedByLMP[0].Hour, sortedByLMP[1].Hour]; // Highest LMP among available
+    const bottomHours = [sortedByLMP[sortedByLMP.length - 2].Hour, sortedByLMP[sortedByLMP.length - 1].Hour]; // Lowest LMP among available
+
+    console.log(`${dateString}: Detailed LMP breakdown (available hours only):`);
+    console.log(`  Available hours sorted by LMP (descending):`);
     sortedByLMP.forEach((hour, index) => {
+      const hourEnding = hour.Hour;
+      const hourBeginning = hourEnding === 1 ? 0 : hourEnding - 1;
+      const restriction = chargingRestrictions[hourBeginning];
       const position = index === 0 ? ' (HIGHEST)' : 
                      index === 1 ? ' (2ND HIGHEST)' : 
-                     index === 22 ? ' (2ND LOWEST)' : 
-                     index === 23 ? ' (LOWEST)' : '';
-      console.log(`    Hour ${hour.Hour}: LMP=$${hour.lmp.toFixed(2)}${position}`);
+                     index === sortedByLMP.length - 2 ? ' (2ND LOWEST)' : 
+                     index === sortedByLMP.length - 1 ? ' (LOWEST)' : '';
+      console.log(`    Hour ${hour.Hour} (HB ${hourBeginning}): LMP=$${hour.lmp.toFixed(2)}, Restriction=${restriction} MW${position}`);
     });
-    console.log(`  → Top hours (highest LMP): ${topHours}`);
-    console.log(`  → Bottom hours (lowest LMP): ${bottomHours}`);
+    console.log(`  → Top hours (highest LMP, chargeable): ${topHours}`);
+    console.log(`  → Bottom hours (lowest LMP, chargeable): ${bottomHours}`);
 
     // Step 5: Get congestion data for these specific hours
     const targetDate = new Date(dateString);

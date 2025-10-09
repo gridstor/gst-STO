@@ -411,3 +411,4 @@ async function fetchForecastData(
     return [];
   }
 }
+

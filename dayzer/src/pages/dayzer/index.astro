@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import MECOverviewChart from '../../components/common/MECOverviewChart';
+import ChargingRestrictionsDisplay from '../../components/common/ChargingRestrictionsDisplay';
 
 // Get the correct base URL for API calls
 const getBaseUrl = () => {
@@ -20,6 +21,9 @@ try {
   const response = await fetch(`${baseUrl}/api/tb26-calculation`);
   if (response.ok) {
     tb26Data = await response.json();
+    console.log('TB2.6 data received:', tb26Data);
+    console.log('Charging restrictions:', tb26Data?.chargingRestrictions);
+    console.log('Current month:', tb26Data?.currentMonth);
   } else {
     console.error('Failed to fetch TB2.6 data:', response.status);
     tb26Data = null;
@@ -160,6 +164,26 @@ const getDateRangeLabel = (data: any[]) => {
       {/* Footer Info */}
       <div class="mt-6 text-center text-xs text-gray-500">
         <p>Based on 60MW/160MWh battery with 86% round-trip efficiency, Day-Ahead values</p>
+      </div>
+    </div>
+
+    {/* Charging Restrictions Display */}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-8 max-w-6xl mx-auto">
+      <div class="text-center mb-6">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-2">Charging Restrictions</h2>
+        <p class="text-sm text-gray-600">{tb26Data?.currentMonth || new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+      </div>
+
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <p class="text-sm text-gray-700 font-mono leading-relaxed text-center">
+          {(tb26Data?.chargingRestrictions || [11.0, 41.3, 41.3, 41.3, 41.3, 41.3, 41.3, 11.0, 11.0, 11.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11.0, 11.0, 11.0, 11.0, 11.0])
+            .map((limit: number) => limit.toFixed(1))
+            .join(', ')}
+        </p>
+      </div>
+
+      <div class="mt-4 text-center text-xs text-gray-600">
+        <p>24 hourly values (Hour Beginning 0-23) representing maximum charging capacity (MW) for each hour</p>
       </div>
     </div>
 

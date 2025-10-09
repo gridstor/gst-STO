@@ -120,6 +120,16 @@ const Navbar: React.FC = () => {
               >
                 GOOP
               </a>
+
+              {/* Weekly Recap Tab */}
+              <a
+                href="/market-ops/weekly-recap"
+                className={`text-sm font-medium transition-colors px-3 py-1 ${
+                  currentPath === '/market-ops/weekly-recap' ? 'text-white' : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                Weekly Recap
+              </a>
             </nav>
           </div>
           
