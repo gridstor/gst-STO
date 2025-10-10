@@ -32,7 +32,7 @@ const Navbar: React.FC = () => {
 
   return (
     <header className="bg-[#2A2A2A] text-white shadow-sm">
-      <div className="max-w-7xl mx-auto pl-8 pr-4 sm:pl-10 sm:pr-6 lg:pl-16 lg:pr-8">
+      <div className="max-w-7xl mx-auto pl-2 pr-4 sm:pl-3 sm:pr-6 lg:pl-4 lg:pr-8">
         <div className="flex justify-between items-center py-3">
           {/* Left side: Logo + Navigation */}
           <div className="flex items-center gap-7">
@@ -42,7 +42,7 @@ const Navbar: React.FC = () => {
                className="hover:text-gray-300 transition-colors"
              >
                <div className="bg-white p-1 flex items-center justify-center">
-                 <img src="/GST_logo.svg" alt="GridStor Analytics Logo" className="w-6 h-6" />
+                 <img src="/new_GST_logo.png" alt="GridStor Analytics Logo" className="h-6 w-auto" />
                </div>
              </a>
             
