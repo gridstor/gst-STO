@@ -172,10 +172,9 @@ export default function CombinedRenewablesChart() {
     setError(null);
 
     try {
-      // Check URL parameters for selected scenarios
-      const urlParams = new URLSearchParams(window.location.search);
-      const currentWeekScenario = urlParams.get('currentWeekScenario');
-      const lastWeekScenario = urlParams.get('lastWeekScenario');
+      // Check sessionStorage for selected scenarios (no longer using URL parameters)
+      const currentWeekScenario = sessionStorage.getItem('currentWeekScenario');
+      const lastWeekScenario = sessionStorage.getItem('lastWeekScenario');
       
       console.log('Fetching renewables with scenarios:', { currentWeekScenario, lastWeekScenario });
 

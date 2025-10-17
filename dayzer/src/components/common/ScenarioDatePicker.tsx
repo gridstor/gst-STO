@@ -84,20 +84,8 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
     setSelectedDate(dateStr);
     setIsCalendarOpen(false);
     
-    // Update URL parameters to trigger chart updates
-    const url = new URL(window.location.href);
-    url.searchParams.set('currentWeekScenario', futureWeekScenario.scenarioid.toString());
-    if (pastWeekScenario) {
-      url.searchParams.set('lastWeekScenario', pastWeekScenario.scenarioid.toString());
-    } else {
-      url.searchParams.delete('lastWeekScenario');
-    }
-    url.searchParams.set('selectedDate', dateStr);
-    
-    // Update URL without page reload
-    window.history.pushState({}, '', url.toString());
-    
     // Trigger a custom event to notify charts of the change
+    // Charts will use the scenario IDs from the event detail
     window.dispatchEvent(new CustomEvent('scenarioChanged', {
       detail: {
         selectedDate: dateStr,

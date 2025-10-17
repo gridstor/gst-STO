@@ -151,8 +151,31 @@ export const GET: APIRoute = async ({ request }) => {
     console.log('Unique datetime count:', Object.keys(aggregatedData).length);
     console.log('Sample datetime keys:', Object.keys(aggregatedData).slice(0, 10));
 
+    // Get scenario metadata (simulation date)
+    const scenarioMetadata = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+      where: { scenarioid },
+      select: { 
+        simulation_date: true,
+        scenarioname: true
+      }
+    });
+
+    // Calculate date range from the data
+    let dateRange = null;
+    if (results.length > 0) {
+      const dates = results.map(r => r.Date);
+      const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+      const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+      dateRange = {
+        start: minDate.toISOString().split('T')[0],
+        end: maxDate.toISOString().split('T')[0]
+      };
+    }
+
     return new Response(JSON.stringify({ 
-      scenarioid, 
+      scenarioid,
+      simulationDate: scenarioMetadata?.simulation_date || null,
+      dateRange,
       data: processedData 
     }), {
       status: 200,

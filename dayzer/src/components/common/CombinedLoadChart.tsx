@@ -64,6 +64,10 @@ export default function CombinedLoadChart() {
   const [showAccuracy, setShowAccuracy] = useState<boolean>(false);
   const [showCustomization, setShowCustomization] = useState<boolean>(false);
   
+  // Store current scenario IDs in component state
+  const [currentWeekScenarioId, setCurrentWeekScenarioId] = useState<string | null>(null);
+  const [lastWeekScenarioId, setLastWeekScenarioId] = useState<string | null>(null);
+  
   // Color palette (16 colors)
   const colorOptions = [
     '#3b82f6', // Blue
@@ -179,20 +183,16 @@ export default function CombinedLoadChart() {
     setError(null);
 
     try {
-      // Check URL parameters for selected scenarios
-      const urlParams = new URLSearchParams(window.location.search);
-      const currentWeekScenario = urlParams.get('currentWeekScenario');
-      const lastWeekScenario = urlParams.get('lastWeekScenario');
-      
-      console.log('Fetching with scenarios:', { currentWeekScenario, lastWeekScenario });
+      // Use scenario IDs from component state
+      console.log('Fetching with scenarios:', { currentWeekScenario: currentWeekScenarioId, lastWeekScenario: lastWeekScenarioId });
 
-      // Build API URLs with scenario parameters
-      const forecastUrl = currentWeekScenario 
-        ? `/api/load-net-load-forecast?scenarioId=${currentWeekScenario}`
+      // Build API URLs with scenario parameters from state
+      const forecastUrl = currentWeekScenarioId 
+        ? `/api/load-net-load-forecast?scenarioId=${currentWeekScenarioId}`
         : '/api/load-net-load-forecast';
         
-      const lastWeekUrl = lastWeekScenario 
-        ? `/api/load-last-week-forecast?scenarioId=${lastWeekScenario}`
+      const lastWeekUrl = lastWeekScenarioId 
+        ? `/api/load-last-week-forecast?scenarioId=${lastWeekScenarioId}`
         : '/api/load-last-week-forecast';
 
       console.log('API URLs:', { forecastUrl, lastWeekUrl });
@@ -342,8 +342,14 @@ export default function CombinedLoadChart() {
   useEffect(() => {
     const handleScenarioChange = (event: CustomEvent) => {
       console.log('CombinedLoadChart received scenario change:', event.detail);
-      // Refetch data with new scenarios
-      fetchData();
+      // Store scenario IDs in state from event
+      if (event.detail.currentWeekScenario) {
+        setCurrentWeekScenarioId(event.detail.currentWeekScenario.toString());
+      }
+      if (event.detail.lastWeekScenario) {
+        setLastWeekScenarioId(event.detail.lastWeekScenario.toString());
+      }
+      // Refetch data will happen automatically when state changes
     };
 
     window.addEventListener('scenarioChanged', handleScenarioChange as EventListener);
@@ -357,6 +363,13 @@ export default function CombinedLoadChart() {
   useEffect(() => {
     fetchData();
   }, []);
+  
+  // Refetch when scenario IDs change
+  useEffect(() => {
+    if (currentWeekScenarioId || lastWeekScenarioId) {
+      fetchData();
+    }
+  }, [currentWeekScenarioId, lastWeekScenarioId]);
 
   // Copy chart as image function
   const copyChartAsImage = async () => {

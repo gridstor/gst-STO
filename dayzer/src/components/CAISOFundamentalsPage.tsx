@@ -13,7 +13,10 @@ export default function CAISOFundamentalsPage() {
     <ScenarioProvider>
       <div className="space-y-6">
         {/* Page Title */}
-        <h1 className="text-3xl font-bold text-gray-900">CAISO Fundamentals</h1>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">CAISO System</h1>
+          <p className="mt-2 text-sm text-gray-600">System-wide Fundamentals Forecast of Load, Net Load, and Generation</p>
+        </div>
         
         {/* Scenario Info Container */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">

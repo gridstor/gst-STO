@@ -20,15 +20,14 @@ const Navbar: React.FC = () => {
   }, []);
 
   const dropdownItems = [
-    { name: 'CAISO Fundamentals', href: '/market-ops/pcm/caiso-forecast' },
-    { name: 'Goleta', href: '/market-ops/pcm/goleta' },
+    { name: 'CAISO System', href: '/short-term-outlook/caiso-system' },
+    { name: 'Goleta Node', href: '/short-term-outlook/goleta' },
   ];
 
-  // Determine if we're on a PCM page (dropdown pages)
-  const isPCMActive = currentPath.startsWith('/market-ops/pcm/');
-  const isLikedayActive = currentPath === '/market-ops/likeday';
-  const isMLActive = currentPath === '/market-ops/ml';
-  const isGOOPActive = currentPath === '/market-ops/goop';
+  // Determine if we're on a CAISO Forecast dropdown page
+  const isCAISOSystemActive = currentPath.startsWith('/short-term-outlook/caiso-system') || 
+                              currentPath === '/short-term-outlook/goleta';
+  const isLikedayActive = currentPath === '/short-term-outlook/likeday';
 
   return (
     <header className="bg-[#2A2A2A] text-white shadow-sm">
@@ -46,27 +45,17 @@ const Navbar: React.FC = () => {
                </div>
              </a>
             
-            {/* Market Ops Brand Name */}
+            {/* Short Term Outlook Brand Name */}
             <a 
-              href="/market-ops" 
+              href="/short-term-outlook" 
               className="text-lg font-semibold hover:text-gray-300 transition-colors"
             >
-              Market Ops
+              Short Term Outlook
             </a>
             
             {/* Navigation */}
             <nav className="hidden lg:flex items-center gap-6">
-              {/* Likeday Tab */}
-              <a
-                href="/market-ops/likeday"
-                className={`text-sm font-medium transition-colors px-3 py-1 ${
-                  isLikedayActive ? 'text-white' : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                Likeday
-              </a>
-
-              {/* PCM Dropdown */}
+              {/* CAISO Forecast Dropdown */}
               <div 
                 className="relative"
                 onMouseEnter={() => setIsDropdownOpen(true)}
@@ -74,10 +63,10 @@ const Navbar: React.FC = () => {
               >
                 <button
                   className={`flex items-center text-sm font-medium transition-colors px-3 py-1 ${
-                    isPCMActive ? 'text-white' : 'text-gray-300 hover:text-white'
+                    isCAISOSystemActive ? 'text-white' : 'text-gray-300 hover:text-white'
                   }`}
                 >
-                  PCM
+                  CAISO Forecast
                   <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -101,52 +90,35 @@ const Navbar: React.FC = () => {
                 )}
               </div>
 
-              {/* ML Tab */}
+              {/* Weekly Insight Tab */}
               <a
-                href="/market-ops/ml"
+                href="/short-term-outlook/weekly-insight"
                 className={`text-sm font-medium transition-colors px-3 py-1 ${
-                  isMLActive ? 'text-white' : 'text-gray-300 hover:text-white'
+                  currentPath === '/short-term-outlook/weekly-insight' ? 'text-white' : 'text-gray-300 hover:text-white'
                 }`}
               >
-                ML
+                Weekly Insight
               </a>
 
-              {/* GOOP Tab */}
+              {/* Likeday Tool Tab */}
               <a
-                href="/market-ops/goop"
+                href="/short-term-outlook/likeday"
                 className={`text-sm font-medium transition-colors px-3 py-1 ${
-                  isGOOPActive ? 'text-white' : 'text-gray-300 hover:text-white'
+                  isLikedayActive ? 'text-white' : 'text-gray-300 hover:text-white'
                 }`}
               >
-                GOOP
-              </a>
-
-              {/* Weekly Recap Tab */}
-              <a
-                href="/market-ops/weekly-recap"
-                className={`text-sm font-medium transition-colors px-3 py-1 ${
-                  currentPath === '/market-ops/weekly-recap' ? 'text-white' : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                Weekly Recap
+                Likeday Tool
               </a>
             </nav>
           </div>
           
-          {/* Right side: Settings + User icons */}
-          <div className="flex items-center gap-1">
+          {/* Right side: Settings icon */}
+          <div className="flex items-center">
             {/* Settings Icon */}
             <button className="p-2 hover:bg-gray-700 rounded-md transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              </svg>
-            </button>
-            
-            {/* User Profile Icon */}
-            <button className="p-2 hover:bg-gray-700 rounded-md transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
               </svg>
             </button>
           </div>

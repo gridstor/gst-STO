@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useScenario } from '../../contexts/ScenarioContext';
 import CalendarPicker from './CalendarPicker';
 
@@ -9,6 +9,21 @@ interface ScenarioInfoProps {
 export default function ScenarioInfo({ className = '' }: ScenarioInfoProps) {
   const { selectedScenario, availableScenarios, setSelectedScenario, loading, error } = useScenario();
   const [showCalendar, setShowCalendar] = useState(false);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
+
+  // Fetch date range when scenario changes
+  useEffect(() => {
+    if (!selectedScenario) return;
+    
+    fetch(`/api/zone-demand?scenarioid=${selectedScenario.scenarioid}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.dateRange) {
+          setDateRange(data.dateRange);
+        }
+      })
+      .catch(err => console.error('Error fetching date range:', err));
+  }, [selectedScenario]);
 
   // Format date for display
   const formatDisplayDate = (dateString: string) => {
@@ -80,10 +95,7 @@ export default function ScenarioInfo({ className = '' }: ScenarioInfoProps) {
         <div className="py-4">
           <div className="flex justify-center">
             <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-1">
-                <span className="text-sm font-medium text-gray-500">Scenario ID:</span>
-                <span className="text-sm font-semibold text-blue-600">{selectedScenario.scenarioid}</span>
-              </div>
+              {/* 1. Simulation Date */}
               <div className="flex items-center space-x-1 relative">
                 <span className="text-sm font-medium text-gray-500">Simulation Date:</span>
                 <button
@@ -107,6 +119,22 @@ export default function ScenarioInfo({ className = '' }: ScenarioInfoProps) {
                     />
                   </div>
                 )}
+              </div>
+              
+              {/* 2. Date Range */}
+              {dateRange && (
+                <div className="flex items-center space-x-1">
+                  <span className="text-sm font-medium text-gray-500">Date Range:</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {formatDisplayDate(dateRange.start)} - {formatDisplayDate(dateRange.end)}
+                  </span>
+                </div>
+              )}
+              
+              {/* 3. Dayzer Scenario ID */}
+              <div className="flex items-center space-x-1">
+                <span className="text-sm font-medium text-gray-500">Dayzer Scenario ID:</span>
+                <span className="text-sm font-semibold text-blue-600">{selectedScenario.scenarioid}</span>
               </div>
             </div>
           </div>
