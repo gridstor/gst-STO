@@ -66,6 +66,10 @@ export default function CombinedLMPChart() {
   const [viewMode, setViewMode] = useState<'full' | 'lastWeek' | 'forecast'>('full');
   const [showCustomization, setShowCustomization] = useState<boolean>(false);
   
+  // Store current scenario IDs in component state
+  const [currentWeekScenarioId, setCurrentWeekScenarioId] = useState<string | null>(null);
+  const [lastWeekScenarioId, setLastWeekScenarioId] = useState<string | null>(null);
+  
   // Color palette (16 colors)
   const colorOptions = [
     '#3b82f6', // Blue
@@ -203,19 +207,16 @@ export default function CombinedLMPChart() {
     setError(null);
 
     try {
-      // Check sessionStorage for selected scenarios (no longer using URL parameters)
-      const currentWeekScenario = sessionStorage.getItem('currentWeekScenario');
-      const lastWeekScenario = sessionStorage.getItem('lastWeekScenario');
-      
-      console.log('Fetching LMP with scenarios:', { currentWeekScenario, lastWeekScenario });
+      // Use scenario IDs from component state
+      console.log('Fetching LMP with scenarios:', { currentWeekScenario: currentWeekScenarioId, lastWeekScenario: lastWeekScenarioId });
 
-      // Build API URLs with scenario parameters
-      const forecastUrl = currentWeekScenario 
-        ? `/api/lmp-forecast?scenarioId=${currentWeekScenario}`
+      // Build API URLs with scenario parameters from state
+      const forecastUrl = currentWeekScenarioId 
+        ? `/api/lmp-forecast?scenarioId=${currentWeekScenarioId}`
         : '/api/lmp-forecast';
         
-      const lastWeekUrl = lastWeekScenario 
-        ? `/api/lmp-last-week-forecast?scenarioId=${lastWeekScenario}`
+      const lastWeekUrl = lastWeekScenarioId 
+        ? `/api/lmp-last-week-forecast?scenarioId=${lastWeekScenarioId}`
         : '/api/lmp-last-week-forecast';
 
       console.log('LMP API URLs:', { forecastUrl, lastWeekUrl });
@@ -357,18 +358,35 @@ export default function CombinedLMPChart() {
     }
   };
 
+  // Listen for scenario changes
   useEffect(() => {
-    fetchData();
-
-    // Listen for scenario changes from the date picker
-    const handleScenarioChange = () => {
-      console.log('LMP chart: Scenario changed, refetching data...');
-      fetchData();
+    const handleScenarioChange = (event: CustomEvent) => {
+      console.log('LMP chart received scenario change:', event.detail);
+      // Store scenario IDs in state from event
+      if (event.detail.currentWeekScenario) {
+        setCurrentWeekScenarioId(event.detail.currentWeekScenario.toString());
+      }
+      if (event.detail.lastWeekScenario) {
+        setLastWeekScenarioId(event.detail.lastWeekScenario.toString());
+      }
+      // Refetch will happen automatically when state changes
     };
 
-    window.addEventListener('scenarioChanged', handleScenarioChange);
-    return () => window.removeEventListener('scenarioChanged', handleScenarioChange);
+    window.addEventListener('scenarioChanged', handleScenarioChange as EventListener);
+    return () => window.removeEventListener('scenarioChanged', handleScenarioChange as EventListener);
   }, []);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchData();
+  }, []);
+  
+  // Refetch when scenario IDs change
+  useEffect(() => {
+    if (currentWeekScenarioId || lastWeekScenarioId) {
+      fetchData();
+    }
+  }, [currentWeekScenarioId, lastWeekScenarioId]);
 
   // Copy chart as image function
   const copyChartAsImage = async () => {

@@ -15,6 +15,10 @@ interface WeekOverviewData {
   component: string;
   thisWeekAvg: number;
   lastWeekAvg: number;
+  thisWeekMax: number;
+  lastWeekMax: number;
+  thisWeekMin: number;
+  lastWeekMin: number;
   absoluteChange: number;
   percentageChange: number;
   trend: 'up' | 'down' | 'flat';
@@ -177,16 +181,28 @@ export const GET: APIRoute = async ({ request }) => {
     
     const thisWeekAvgTotalDemand = demandHourlyValues.length > 0 ? 
       demandHourlyValues.reduce((sum, val) => sum + val, 0) / demandHourlyValues.length : 0;
+    const thisWeekMaxTotalDemand = demandHourlyValues.length > 0 ? Math.max(...demandHourlyValues) : 0;
+    const thisWeekMinTotalDemand = demandHourlyValues.length > 0 ? Math.min(...demandHourlyValues) : 0;
     
     const thisWeekAvgRenewable = renewableHourlyValues.length > 0 ? 
       renewableHourlyValues.reduce((sum, val) => sum + val, 0) / renewableHourlyValues.length : 0;
+    const thisWeekMaxRenewable = renewableHourlyValues.length > 0 ? Math.max(...renewableHourlyValues) : 0;
+    const thisWeekMinRenewable = renewableHourlyValues.length > 0 ? Math.min(...renewableHourlyValues) : 0;
     
     const thisWeekAvgNetLoad = thisWeekAvgTotalDemand - thisWeekAvgRenewable;
+    const thisWeekMaxNetLoad = thisWeekMaxTotalDemand - thisWeekMinRenewable; // Max net load when demand is max and renewables are min
+    const thisWeekMinNetLoad = thisWeekMinTotalDemand - thisWeekMaxRenewable; // Min net load when demand is min and renewables are max
 
     // Get last week's actual data from secondary database
     let lastWeekAvgTotalDemand = 0;
+    let lastWeekMaxTotalDemand = 0;
+    let lastWeekMinTotalDemand = 0;
     let lastWeekAvgNetLoad = 0;
+    let lastWeekMaxNetLoad = 0;
+    let lastWeekMinNetLoad = 0;
     let lastWeekAvgRenewable = 0;
+    let lastWeekMaxRenewable = 0;
+    let lastWeekMinRenewable = 0;
 
     try {
       // Get actual total demand
@@ -234,15 +250,19 @@ export const GET: APIRoute = async ({ request }) => {
       const filteredNetLoad = filterByHours(netLoadQuery.rows);
       const filteredRenewable = filterByHours(renewableQuery.rows);
 
-      // Calculate averages
+      // Calculate averages, max, and min for Last Week
       if (filteredDemand.length > 0) {
-        const totalDemand = filteredDemand.reduce((sum, row) => sum + (Number(row.value) || 0), 0);
-        lastWeekAvgTotalDemand = (totalDemand / filteredDemand.length) / 1000; // Convert MW to GW
+        const demandValues = filteredDemand.map(row => Number(row.value) || 0);
+        lastWeekAvgTotalDemand = (demandValues.reduce((sum, val) => sum + val, 0) / demandValues.length) / 1000; // Convert MW to GW
+        lastWeekMaxTotalDemand = Math.max(...demandValues) / 1000;
+        lastWeekMinTotalDemand = Math.min(...demandValues) / 1000;
       }
 
       if (filteredNetLoad.length > 0) {
-        const totalNetLoad = filteredNetLoad.reduce((sum, row) => sum + (Number(row.value) || 0), 0);
-        lastWeekAvgNetLoad = (totalNetLoad / filteredNetLoad.length) / 1000; // Convert MW to GW
+        const netLoadValues = filteredNetLoad.map(row => Number(row.value) || 0);
+        lastWeekAvgNetLoad = (netLoadValues.reduce((sum, val) => sum + val, 0) / netLoadValues.length) / 1000; // Convert MW to GW
+        lastWeekMaxNetLoad = Math.max(...netLoadValues) / 1000;
+        lastWeekMinNetLoad = Math.min(...netLoadValues) / 1000;
       }
 
       // Fix renewable calculation - aggregate by hour first, then average
@@ -261,11 +281,13 @@ export const GET: APIRoute = async ({ request }) => {
           renewableByHour[hourKey] += Number(row.value) || 0;
         });
         
-        // Calculate average from hourly totals
+        // Calculate average, max, and min from hourly totals
         const hourlyTotals = Object.values(renewableByHour);
         if (hourlyTotals.length > 0) {
           const totalRenewable = hourlyTotals.reduce((sum, hourTotal) => sum + hourTotal, 0);
           lastWeekAvgRenewable = (totalRenewable / hourlyTotals.length) / 1000; // Convert MW to GW
+          lastWeekMaxRenewable = Math.max(...hourlyTotals) / 1000;
+          lastWeekMinRenewable = Math.min(...hourlyTotals) / 1000;
         }
       }
 
@@ -311,18 +333,30 @@ export const GET: APIRoute = async ({ request }) => {
         component: 'Total Demand',
         thisWeekAvg: thisWeekAvgTotalDemand,
         lastWeekAvg: lastWeekAvgTotalDemand,
+        thisWeekMax: thisWeekMaxTotalDemand,
+        lastWeekMax: lastWeekMaxTotalDemand,
+        thisWeekMin: thisWeekMinTotalDemand,
+        lastWeekMin: lastWeekMinTotalDemand,
         ...demandTrend
       },
       {
         component: 'Net Load',
         thisWeekAvg: thisWeekAvgNetLoad,
         lastWeekAvg: lastWeekAvgNetLoad,
+        thisWeekMax: thisWeekMaxNetLoad,
+        lastWeekMax: lastWeekMaxNetLoad,
+        thisWeekMin: thisWeekMinNetLoad,
+        lastWeekMin: lastWeekMinNetLoad,
         ...netLoadTrend
       },
       {
         component: 'Renewable Generation',
         thisWeekAvg: thisWeekAvgRenewable,
         lastWeekAvg: lastWeekAvgRenewable,
+        thisWeekMax: thisWeekMaxRenewable,
+        lastWeekMax: lastWeekMaxRenewable,
+        thisWeekMin: thisWeekMinRenewable,
+        lastWeekMin: lastWeekMinRenewable,
         ...renewableTrend
       }
     ];

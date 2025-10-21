@@ -40,7 +40,11 @@ interface MECResponse {
   };
 }
 
-export default function MECOverviewChart() {
+interface MECOverviewChartProps {
+  scenarioId?: number; // Optional: if provided, will fetch MEC for this specific scenario
+}
+
+export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps = {}) {
   const [data, setData] = useState<MECData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +56,10 @@ export default function MECOverviewChart() {
 
       try {
         console.log('Fetching MCE overview data...');
-        const response = await fetch(`${window.location.origin}/api/mec-overview`);
+        const apiUrl = scenarioId 
+          ? `${window.location.origin}/api/mec-overview?scenarioId=${scenarioId}`
+          : `${window.location.origin}/api/mec-overview`;
+        const response = await fetch(apiUrl);
         console.log('Response status:', response.status);
         
         if (!response.ok) {
@@ -73,7 +80,7 @@ export default function MECOverviewChart() {
     };
 
     fetchData();
-  }, []);
+  }, [scenarioId]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -181,9 +188,10 @@ export default function MECOverviewChart() {
 
   const yAxisTicks = generateYAxisTicks();
 
-  const renderChart = (chartData: MECData[], title: string, showYAxisLabel: boolean = false, isComingSoon: boolean = false) => (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 flex flex-col">
-      <h3 className="text-lg font-medium text-gray-700 text-center">{title}</h3>
+  const renderChart = (chartData: MECData[], title: string, showYAxisLabel: boolean = false, isComingSoon: boolean = false, makeClickable: boolean = false) => {
+    const content = (
+      <>
+        <h3 className="text-lg font-medium text-gray-700 text-center">{title}</h3>
       
       {isComingSoon ? (
         <div className="h-80 w-full bg-white rounded border border-gray-100 flex items-center justify-center">
@@ -234,13 +242,31 @@ export default function MECOverviewChart() {
           </div>
         </div>
       )}
-    </div>
-  );
+      </>
+    );
+    
+    if (makeClickable) {
+      return (
+        <a 
+          href="/short-term-outlook/caiso-system#mec-overview"
+          className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 flex flex-col hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+        >
+          {content}
+        </a>
+      );
+    }
+    
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 flex flex-col">
+        {content}
+      </div>
+    );
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {renderChart(lastWeekData, "Last Week", true, true)}
-      {renderChart(thisWeekData, "This Week", true)}
+      {renderChart(lastWeekData, "Last Week", true, true, scenarioId === undefined)}
+      {renderChart(thisWeekData, "This Week", true, false, scenarioId === undefined)}
     </div>
   );
 } 

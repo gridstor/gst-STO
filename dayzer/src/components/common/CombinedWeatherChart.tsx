@@ -55,6 +55,11 @@ export default function CombinedWeatherChart() {
   const [degreeYAxisMin, setDegreeYAxisMin] = useState<number>(0);
   const [viewMode, setViewMode] = useState<'full' | 'lastWeek' | 'forecast'>('full');
   const [showCustomization, setShowCustomization] = useState<boolean>(false);
+  
+  // Store current scenario IDs in component state
+  const [currentWeekScenarioId, setCurrentWeekScenarioId] = useState<string | null>(null);
+  const [lastWeekScenarioId, setLastWeekScenarioId] = useState<string | null>(null);
+  
   // Color palette (16 colors)
   const colorOptions = [
     '#3b82f6', // Blue
@@ -166,20 +171,16 @@ export default function CombinedWeatherChart() {
     setError(null);
 
     try {
-      // Check URL parameters for selected scenarios
-      const urlParams = new URLSearchParams(window.location.search);
-      const currentWeekScenario = urlParams.get('currentWeekScenario');
-      const lastWeekScenario = urlParams.get('lastWeekScenario');
-      
-      console.log('Fetching weather with scenarios:', { currentWeekScenario, lastWeekScenario });
+      // Use scenario IDs from component state
+      console.log('Fetching weather with scenarios:', { currentWeekScenario: currentWeekScenarioId, lastWeekScenario: lastWeekScenarioId });
 
-      // Build API URLs with scenario parameters (same as other charts)
-      const forecastUrl = currentWeekScenario 
-        ? `/api/weather-forecast?scenarioId=${currentWeekScenario}`
+      // Build API URLs with scenario parameters from state
+      const forecastUrl = currentWeekScenarioId 
+        ? `/api/weather-forecast?scenarioId=${currentWeekScenarioId}`
         : '/api/weather-forecast';
         
-      const lastWeekUrl = lastWeekScenario 
-        ? `/api/weather-last-week-forecast?scenarioId=${lastWeekScenario}`
+      const lastWeekUrl = lastWeekScenarioId 
+        ? `/api/weather-last-week-forecast?scenarioId=${lastWeekScenarioId}`
         : '/api/weather-last-week-forecast';
 
       console.log('Weather API URLs:', { forecastUrl, lastWeekUrl });
@@ -347,14 +348,33 @@ export default function CombinedWeatherChart() {
     fetchData();
 
     // Listen for scenario changes from the date picker
-    const handleScenarioChange = () => {
-      console.log('Weather chart: Scenario changed, refetching data...');
-      fetchData();
+    const handleScenarioChange = (event: CustomEvent) => {
+      console.log('Weather chart received scenario change:', event.detail);
+      // Store scenario IDs in state from event
+      if (event.detail.currentWeekScenario) {
+        setCurrentWeekScenarioId(event.detail.currentWeekScenario.toString());
+      }
+      if (event.detail.lastWeekScenario) {
+        setLastWeekScenarioId(event.detail.lastWeekScenario.toString());
+      }
+      // Refetch will happen automatically when state changes
     };
 
-    window.addEventListener('scenarioChanged', handleScenarioChange);
-    return () => window.removeEventListener('scenarioChanged', handleScenarioChange);
+    window.addEventListener('scenarioChanged', handleScenarioChange as EventListener);
+    return () => window.removeEventListener('scenarioChanged', handleScenarioChange as EventListener);
   }, []);
+  
+  // Initial data fetch
+  useEffect(() => {
+    fetchData();
+  }, []);
+  
+  // Refetch when scenario IDs change
+  useEffect(() => {
+    if (currentWeekScenarioId || lastWeekScenarioId) {
+      fetchData();
+    }
+  }, [currentWeekScenarioId, lastWeekScenarioId]);
 
   // Copy chart as image function
   const copyChartAsImage = async () => {
@@ -827,6 +847,15 @@ export default function CombinedWeatherChart() {
                 vertical={true}
               />
               
+              {/* Light grey background for Last Week area */}
+              {showGreyBackground && lastWeekEndDate && forecastStartDate && (
+                <ReferenceArea
+                  x1={filteredData[0]?.datetime}
+                  x2={lastWeekEndDate}
+                  fill="#e5e7eb"
+                  fillOpacity={0.5}
+                />
+              )}
               
               <XAxis 
                 dataKey="datetime"

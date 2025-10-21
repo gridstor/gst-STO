@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScenarioProvider } from '../contexts/ScenarioContext';
 import ScenarioInfo from './common/ScenarioInfo';
+import MECOverviewWrapper from './common/MECOverviewWrapper';
 import ZoneDemandChart from './common/ZoneDemandChart';
 import NetLoadChart from './common/NetLoadChart';
 import WeeklyLoadComparison from './common/WeeklyLoadComparison';
@@ -43,6 +44,9 @@ export default function CAISOFundamentalsPage() {
             <SupplyStackChart />
           </div>
         </div>
+        
+        {/* MEC Overview - Full Width at Bottom */}
+        <MECOverviewWrapper />
       </div>
     </ScenarioProvider>
   );

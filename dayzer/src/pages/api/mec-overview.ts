@@ -103,15 +103,32 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     console.log('=== MCE Overview API ===');
     
-    // Get most recent scenario (same logic as other APIs)
-    const latestScenarioRaw = await prisma.$queryRaw`
-      SELECT scenarioid, scenarioname, simulation_date
-      FROM "output_db"."info_scenarioid_scenarioname_mapping"
-      ORDER BY scenarioid DESC
-      LIMIT 1
-    ` as any[];
+    // Check if scenarioId is provided in query parameters
+    const url = new URL(request.url);
+    const requestedScenarioId = url.searchParams.get('scenarioId');
+    
+    let targetScenarioRaw;
+    if (requestedScenarioId) {
+      // Use requested scenario
+      targetScenarioRaw = await prisma.$queryRaw`
+        SELECT scenarioid, scenarioname, simulation_date
+        FROM "output_db"."info_scenarioid_scenarioname_mapping"
+        WHERE scenarioid = ${parseInt(requestedScenarioId)}
+        LIMIT 1
+      ` as any[];
+      console.log('Using requested scenario:', targetScenarioRaw[0]);
+    } else {
+      // Get most recent scenario (default behavior)
+      targetScenarioRaw = await prisma.$queryRaw`
+        SELECT scenarioid, scenarioname, simulation_date
+        FROM "output_db"."info_scenarioid_scenarioname_mapping"
+        ORDER BY scenarioid DESC
+        LIMIT 1
+      ` as any[];
+      console.log('Using latest scenario:', targetScenarioRaw[0]);
+    }
 
-    if (!latestScenarioRaw || latestScenarioRaw.length === 0) {
+    if (!targetScenarioRaw || targetScenarioRaw.length === 0) {
       return new Response(
         JSON.stringify({ error: 'No scenarios found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
@@ -120,13 +137,13 @@ export const GET: APIRoute = async ({ request }) => {
 
     // Convert BigInt scenarioid
     const scenario = {
-      ...latestScenarioRaw[0],
-      scenarioid: Number(latestScenarioRaw[0].scenarioid)
+      ...targetScenarioRaw[0],
+      scenarioid: Number(targetScenarioRaw[0].scenarioid)
     };
     console.log('Using scenario:', scenario);
 
-    // Define date ranges using same logic as weekly congestion
-    const today = new Date();
+    // Define date ranges based on scenario's simulation date (if provided) or today
+    const today = scenario.simulation_date ? new Date(scenario.simulation_date) : new Date();
     
     // This Week: Today through Today + 6 days (7 day span forward)
     const thisWeekStart = new Date(today);

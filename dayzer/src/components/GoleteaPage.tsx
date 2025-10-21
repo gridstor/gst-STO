@@ -1,6 +1,8 @@
 import React from 'react';
 import { ScenarioProvider } from '../contexts/ScenarioContext';
 import ScenarioInfo from './common/ScenarioInfo';
+import TB26Wrapper from './common/TB26Wrapper';
+import WeeklyCongestionWrapper from './common/WeeklyCongestionWrapper';
 import PricingChart from './common/PricingChart';
 import CongestionChart from './common/CongestionChart';
 import WeeklyLMPComparison from './common/WeeklyLMPComparison';
@@ -19,6 +21,9 @@ export default function GoleteaPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <ScenarioInfo />
         </div>
+        
+        {/* TB2.6 Performance Overview */}
+        <TB26Wrapper />
         
         {/* Charts with Side Sections */}
         <div className="space-y-8">
@@ -40,6 +45,11 @@ export default function GoleteaPage() {
           {/* Bottom Hours Frequency Heatmap - Full Width */}
           <div>
             <BottomHoursHeatmap />
+          </div>
+          
+          {/* Weekly Congestion - Full Width */}
+          <div>
+            <WeeklyCongestionWrapper />
           </div>
           
           {/* Row 2: Congestion Analysis + Side Section 2 */}

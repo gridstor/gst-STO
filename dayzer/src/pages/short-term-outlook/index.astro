@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import MECOverviewChart from '../../components/common/MECOverviewChart';
 import TB26Display from '../../components/common/TB26Display';
+import FundamentalsOverview from '../../components/common/FundamentalsOverview';
 
 // Get the correct base URL for API calls
 const getBaseUrl = () => {
@@ -96,6 +97,9 @@ const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long' 
     
     {/* TB2.6 Performance Overview with Collapsible Restrictions */}
     <TB26Display tb26Data={tb26Data} client:load />
+    
+    {/* Fundamentals Overview */}
+    <FundamentalsOverview client:load />
 
     {/* Congestion Analysis - NEW SECTION */}
     <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-6xl mx-auto">
@@ -116,7 +120,10 @@ const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long' 
       {weeklyCongestionData ? (
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Last Week Chart */}
-          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+          <a 
+            href="/short-term-outlook/goleta#weekly-congestion"
+            class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 block hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+          >
             <h3 class="text-lg font-medium text-gray-700 text-center">
               Last Week
             </h3>
@@ -152,10 +159,13 @@ const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long' 
                 </div>
               </div>
             </div>
-          </div>
+          </a>
 
           {/* This Week Chart */}
-          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+          <a 
+            href="/short-term-outlook/goleta#weekly-congestion"
+            class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 block hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+          >
             <h3 class="text-lg font-medium text-gray-700 text-center">
               This Week
             </h3>
@@ -201,7 +211,7 @@ const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long' 
                 </div>
               </div>
             </div>
-          </div>
+          </a>
         </div>
       ) : (
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -241,7 +251,7 @@ const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long' 
       </div>
       
       <div class="space-y-4">
-        {/* React Chart Component */}
+        {/* React Chart Component - Will be wrapped to make clickable sections */}
         <MECOverviewChart client:load />
       </div>
     </div>

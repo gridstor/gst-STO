@@ -16,19 +16,63 @@ interface TB26Data {
     energyTB26: number;
     congestionTB26: number;
   };
+  dateRanges?: {
+    thisWeek: string;
+    lastWeek: string;
+    lastYear: string;
+  };
 }
 
 interface TB26DisplayProps {
   tb26Data: TB26Data | null;
+  scenarioId?: number; // Optional: if provided, will fetch TB2.6 for this specific scenario
 }
 
-export default function TB26Display({ tb26Data }: TB26DisplayProps) {
+export default function TB26Display({ tb26Data: initialData, scenarioId }: TB26DisplayProps) {
   const [showRestrictions, setShowRestrictions] = useState(false);
+  const [tb26Data, setTb26Data] = useState<TB26Data | null>(initialData);
+  const [loading, setLoading] = useState(false);
+  
+  // Fetch TB2.6 data when scenarioId changes
+  React.useEffect(() => {
+    if (scenarioId === undefined) {
+      // Use initial data if no scenarioId provided (homepage behavior)
+      setTb26Data(initialData);
+      return;
+    }
+    
+    const fetchTB26 = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/tb26-calculation?scenarioId=${scenarioId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setTb26Data(data);
+        }
+      } catch (error) {
+        console.error('Error fetching TB2.6 data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTB26();
+  }, [scenarioId, initialData]);
 
   const formatTB26Value = (value: number | undefined) => value?.toFixed(2) || 'X.XX';
 
-  // Get current month info
-  const currentMonthIndex = new Date().getMonth();
+  // Get current month info from TB2.6 data or fallback to today
+  // This ensures the highlighted month matches the selected scenario
+  const currentMonthIndex = React.useMemo(() => {
+    if (tb26Data?.dateRanges?.thisWeek) {
+      // Extract month from "This Week" date range (e.g., "2025-09-15 to 2025-09-21")
+      const startDate = tb26Data.dateRanges.thisWeek.split(' to ')[0];
+      const date = new Date(startDate);
+      return date.getMonth();
+    }
+    // Fallback to today's month if no date range available
+    return new Date().getMonth();
+  }, [tb26Data]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-6xl mx-auto">
@@ -62,7 +106,10 @@ export default function TB26Display({ tb26Data }: TB26DisplayProps) {
       {/* TB2.6 Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Last Year Card */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+        <a 
+          href="/short-term-outlook/goleta"
+          className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center block hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+        >
           <h3 className="text-lg font-medium text-gray-700 mb-3">Last Year</h3>
           <div className="mb-3">
             <div className="text-3xl font-bold text-gray-900">${formatTB26Value(tb26Data?.lastYear?.totalTB26)}</div>
@@ -78,10 +125,18 @@ export default function TB26Display({ tb26Data }: TB26DisplayProps) {
               <span className="font-medium text-gray-900">${formatTB26Value(tb26Data?.lastYear?.congestionTB26)}</span>
             </div>
           </div>
-        </div>
+          {tb26Data?.dateRanges?.lastYear && (
+            <div className="mt-3 pt-2 border-t border-gray-300">
+              <p className="text-xs text-gray-500">{tb26Data.dateRanges.lastYear}</p>
+            </div>
+          )}
+        </a>
 
         {/* Last Week Card */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+        <a 
+          href="/short-term-outlook/goleta"
+          className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center block hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+        >
           <h3 className="text-lg font-medium text-gray-700 mb-3">Last Week</h3>
           <div className="mb-3">
             <div className="text-3xl font-bold text-gray-900">${formatTB26Value(tb26Data?.lastWeek?.totalTB26)}</div>
@@ -97,10 +152,18 @@ export default function TB26Display({ tb26Data }: TB26DisplayProps) {
               <span className="font-medium text-gray-900">${formatTB26Value(tb26Data?.lastWeek?.congestionTB26)}</span>
             </div>
           </div>
-        </div>
+          {tb26Data?.dateRanges?.lastWeek && (
+            <div className="mt-3 pt-2 border-t border-gray-300">
+              <p className="text-xs text-gray-500">{tb26Data.dateRanges.lastWeek}</p>
+            </div>
+          )}
+        </a>
 
         {/* This Week Card */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+        <a 
+          href="/short-term-outlook/goleta"
+          className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center block hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+        >
           <h3 className="text-lg font-medium text-gray-700 mb-3">This Week</h3>
           <div className="mb-3">
             <div className="text-3xl font-bold text-gray-900">${formatTB26Value(tb26Data?.thisWeek?.totalTB26)}</div>
@@ -116,7 +179,12 @@ export default function TB26Display({ tb26Data }: TB26DisplayProps) {
               <span className="font-medium text-gray-900">${formatTB26Value(tb26Data?.thisWeek?.congestionTB26)}</span>
             </div>
           </div>
-        </div>
+          {tb26Data?.dateRanges?.thisWeek && (
+            <div className="mt-3 pt-2 border-t border-gray-300">
+              <p className="text-xs text-gray-500">{tb26Data.dateRanges.thisWeek}</p>
+            </div>
+          )}
+        </a>
       </div>
 
       {/* Collapsible Charging Restrictions Table */}

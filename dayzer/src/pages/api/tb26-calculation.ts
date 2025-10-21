@@ -127,23 +127,36 @@ export const GET: APIRoute = async ({ request }) => {
       ssl: { rejectUnauthorized: false }
     });
 
-    // Get most recent scenario
-    const latestScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
-      orderBy: { scenarioid: 'desc' },
-      select: { scenarioid: true, scenarioname: true },
-    });
+    // Check if scenarioId is provided in query parameters
+    const url = new URL(request.url);
+    const requestedScenarioId = url.searchParams.get('scenarioId');
+    
+    let targetScenario;
+    if (requestedScenarioId) {
+      // Use requested scenario
+      targetScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+        where: { scenarioid: parseInt(requestedScenarioId) },
+        select: { scenarioid: true, scenarioname: true, simulation_date: true },
+      });
+      console.log('Using requested scenario:', targetScenario);
+    } else {
+      // Get most recent scenario (default behavior)
+      targetScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+        orderBy: { scenarioid: 'desc' },
+        select: { scenarioid: true, scenarioname: true, simulation_date: true },
+      });
+      console.log('Using latest scenario:', targetScenario);
+    }
 
-    if (!latestScenario) {
+    if (!targetScenario) {
       return new Response(
         JSON.stringify({ error: 'No scenarios found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Using scenario:', latestScenario);
-
-    // Define date ranges dynamically based on today's date
-    const today = new Date();
+    // Define date ranges based on scenario's simulation date (if provided) or today
+    const today = targetScenario.simulation_date ? new Date(targetScenario.simulation_date) : new Date();
     
     // This Week: Today through today + 6 days (7 day span forward)
     const thisWeekStart = new Date(today);
@@ -173,8 +186,8 @@ export const GET: APIRoute = async ({ request }) => {
     console.log('Last week:', lastWeekStart.toISOString(), 'to', lastWeekEnd.toISOString());
     console.log('Last year:', lastYearStart.toISOString(), 'to', lastYearEnd.toISOString());
 
-    // Calculate This Week (existing logic)
-    const thisWeekResults = await calculateThisWeekTB26(latestScenario.scenarioid, thisWeekStart, thisWeekEnd);
+    // Calculate This Week using target scenario
+    const thisWeekResults = await calculateThisWeekTB26(targetScenario.scenarioid, thisWeekStart, thisWeekEnd);
     
     // Calculate Last Week (existing logic)
     const lastWeekResults = await calculateLastWeekTB26(secondaryPool, lastWeekStart, lastWeekEnd);
@@ -191,7 +204,7 @@ export const GET: APIRoute = async ({ request }) => {
       thisWeek: thisWeekResults,
       lastWeek: lastWeekResults,
       lastYear: lastYearResults,
-      scenarioId: latestScenario.scenarioid,
+      scenarioId: targetScenario.scenarioid,
       dateRanges: {
         thisWeek: `${thisWeekStart.toISOString().split('T')[0]} to ${thisWeekEnd.toISOString().split('T')[0]}`,
         lastWeek: `${lastWeekStart.toISOString().split('T')[0]} to ${lastWeekEnd.toISOString().split('T')[0]}`,
