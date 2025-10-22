@@ -1,15 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useScenario } from '../../contexts/ScenarioContext';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
 
 interface NetLoadDataPoint {
   datetime: string;
@@ -29,6 +19,14 @@ const NetLoadChart: React.FC = () => {
   const [data, setData] = useState<NetLoadDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [Plot, setPlot] = useState<any>(null);
+  
+  // Load Plotly only on client side
+  useEffect(() => {
+    import('react-plotly.js').then((module) => {
+      setPlot(() => module.default);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,131 +57,199 @@ const NetLoadChart: React.FC = () => {
     fetchData();
   }, [selectedScenario]);
 
-  const formatTooltip = (value: number, name: string) => {
-    const displayNames: { [key: string]: string } = {
-      totalDemand: 'Total Demand',
-      renewableGeneration: 'Renewable Generation',
-      netLoad: 'Net Load',
-      caisoNetLoad: 'CAISO Net Load'
-    };
-    
-    return [`${value.toFixed(2)} GW`, displayNames[name] || name];
+  // Display names for metrics
+  const displayNames: { [key: string]: string } = {
+    totalDemand: 'Total Demand',
+    renewableGeneration: 'Renewable Generation',
+    netLoad: 'Net Load',
+    caisoNetLoad: 'CAISO Net Load'
   };
 
-  // Custom tick formatter to show clean date progression
-  const formatDateTick = (tickItem: string) => {
-    const date = new Date(tickItem);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric'
-    });
-  };
+  // Prepare Plotly data traces
+  const plotlyData = useMemo(() => {
+    if (data.length === 0) return [];
 
-  // Formatter for tooltip to show date and hour
-  const formatTooltipLabel = (label: string) => {
-    const date = new Date(label);
-    return `${date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })} at ${date.toLocaleTimeString('en-US', { 
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true 
-    })}`;
-  };
+    const traces = [
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.totalDemand),
+        name: 'Total Demand',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        line: {
+          color: '#3B82F6',
+          width: 2
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f} GW<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.netLoad),
+        name: 'Net Load',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        line: {
+          color: '#EF4444',
+          width: 2
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f} GW<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.caisoNetLoad),
+        name: 'CAISO Net Load',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        line: {
+          color: '#F59E0B',
+          width: 2,
+          dash: 'dash'
+        },
+        connectgaps: false,
+        hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f} GW<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.renewableGeneration),
+        name: 'Renewable Generation',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        line: {
+          color: '#10B981',
+          width: 2
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f} GW<br><extra></extra>'
+      }
+    ];
+
+    return traces;
+  }, [data]);
+
+  // Plotly layout configuration
+  const layout: any = useMemo(() => ({
+    height: 500,
+    margin: { l: 80, r: 40, t: 40, b: 70 },
+    xaxis: {
+      title: { text: '' },
+      tickformat: '%b %d',
+      tickangle: 0,
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      },
+      showspikes: true,
+      spikemode: 'across',
+      spikethickness: 1,
+      spikecolor: '#9CA3AF',
+      spikedash: 'solid',
+      hoverformat: '<b style="font-size: 14px;">%b %d, %Y at %I:%M %p</b><br>'
+    },
+    yaxis: {
+      title: {
+        text: 'Load (GW)',
+        font: {
+          size: 14,
+          color: '#4B5563',
+          family: 'Inter, sans-serif'
+        }
+      },
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      }
+    },
+    hovermode: 'x unified',
+    hoverlabel: {
+      bgcolor: 'white',
+      bordercolor: '#E5E7EB',
+      font: {
+        family: 'Inter, sans-serif',
+        size: 13
+      },
+      namelength: -1
+    },
+    legend: {
+      orientation: 'h',
+      yanchor: 'bottom',
+      y: 1.02,
+      xanchor: 'left',
+      x: 0,
+      font: {
+        size: 13,
+        family: 'Inter, sans-serif'
+      }
+    },
+    plot_bgcolor: 'white',
+    paper_bgcolor: 'white',
+    font: {
+      family: 'Inter, sans-serif',
+      size: 13,
+      color: '#6B7280'
+    }
+  }), []);
+
+  // Plotly config for interactivity
+  const config: any = useMemo(() => ({
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d'] as any,
+    displaylogo: false,
+    responsive: true,
+    toImageButtonOptions: {
+      format: 'png',
+      filename: 'net_load_chart',
+      height: 600,
+      width: 1200,
+      scale: 2
+    }
+  }), []);
 
   return (
     <div className="bg-white border-l-4 border-gs-purple-500 rounded-lg shadow-gs-sm p-6">
       <h3 className="text-lg font-semibold text-gs-gray-900 mb-6">Net Load</h3>
 
-      {loading && <div className="text-gray-600">Loading chart data...</div>}
-      {error && <div className="text-red-600">Error: {error}</div>}
+      {loading && <div className="text-gs-gray-500">Loading chart data...</div>}
+      {error && <div className="text-gs-red-500">Error: {error}</div>}
       
-      {!loading && !error && data.length > 0 && (
+      {!Plot && !loading && !error && (
+        <div className="text-gs-gray-500">Loading chart library...</div>
+      )}
+      
+      {!loading && !error && data.length > 0 && Plot && (
         <div style={{ width: '100%', height: '500px' }}>
-          <ResponsiveContainer>
-            <LineChart data={data} margin={{ top: 20, right: 30, left: 60, bottom: 25 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
-              <XAxis 
-                dataKey="datetime"
-                tickFormatter={formatDateTick}
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                interval={23}
-                height={50}
-              />
-              <YAxis 
-                label={{ 
-                  value: 'Load (GW)', 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  style: { textAnchor: 'middle' }
-                }}
-              />
-              <Tooltip 
-                formatter={formatTooltip}
-                labelFormatter={formatTooltipLabel}
-              />
-              <Legend 
-                formatter={(value) => {
-                  const displayNames: { [key: string]: string } = {
-                    totalDemand: 'Total Demand',
-                    renewableGeneration: 'Renewable Generation',
-                    netLoad: 'Net Load',
-                    caisoNetLoad: 'CAISO Net Load'
-                  };
-                  return displayNames[value] || value;
-                }}
-              />
-              
-              {/* Total Demand - Blue solid line */}
-              <Line
-                type="monotone"
-                dataKey="totalDemand"
-                stroke="#3B82F6"
-                strokeWidth={2}
-                dot={false}
-                strokeDasharray=""
-              />
-              
-              {/* Net Load - Red solid line */}
-              <Line
-                type="monotone"
-                dataKey="netLoad"
-                stroke="#EF4444"
-                strokeWidth={2}
-                dot={false}
-                strokeDasharray=""
-              />
-              
-              {/* CAISO Net Load - Yellow/orange dotted line */}
-              <Line
-                type="monotone"
-                dataKey="caisoNetLoad"
-                stroke="#F59E0B"
-                strokeWidth={2}
-                dot={false}
-                strokeDasharray="8 4"
-                connectNulls={false}
-              />
-              
-              {/* Renewable Generation - Green solid line */}
-              <Line
-                type="monotone"
-                dataKey="renewableGeneration"
-                stroke="#10B981"
-                strokeWidth={2}
-                dot={false}
-                strokeDasharray=""
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <Plot
+            data={plotlyData}
+            layout={layout}
+            config={config}
+            style={{ width: '100%', height: '100%' }}
+            useResizeHandler={true}
+          />
         </div>
       )}
 
       {!loading && !error && data.length === 0 && (
-        <div className="text-gray-600">No net load data available.</div>
+        <div className="text-gs-gray-500">No net load data available.</div>
       )}
     </div>
   );

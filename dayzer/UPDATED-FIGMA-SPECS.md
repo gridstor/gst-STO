@@ -234,3 +234,4 @@ All pages should follow this pattern for consistency:
 
 The homepage now perfectly matches the updated GridStor Design System specifications with the subtle gray background and white content cards.
 
+

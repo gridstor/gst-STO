@@ -1,17 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useScenario } from '../../contexts/ScenarioContext';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Line,
-  ComposedChart,
-} from 'recharts';
 
 interface LMPDataPoint {
   datetime: string;
@@ -39,6 +27,14 @@ const ZoneLMPChart: React.FC = () => {
   const [selectedZone, setSelectedZone] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [Plot, setPlot] = useState<any>(null);
+  
+  // Load Plotly only on client side
+  useEffect(() => {
+    import('react-plotly.js').then((module) => {
+      setPlot(() => module.default);
+    });
+  }, []);
 
   // First, fetch zones list
   useEffect(() => {
@@ -105,34 +101,169 @@ const ZoneLMPChart: React.FC = () => {
     fetchData();
   }, [selectedScenario, selectedZone]);
 
-  const formatTooltip = (value: number, name: string) => {
-    const displayName = name === 'totalLMP' ? 'Total LMP' : 
-                       name.charAt(0).toUpperCase() + name.slice(1);
-    return [`$${value.toFixed(2)}`, displayName];
-  };
+  // Prepare Plotly data traces
+  const plotlyData = useMemo(() => {
+    if (data.length === 0) return [];
 
-  // Custom tick formatter to show clean date progression
-  const formatDateTick = (tickItem: string) => {
-    const date = new Date(tickItem);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric'
-    });
-  };
+    const traces = [
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.energy),
+        name: 'Energy',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        stackgroup: 'one',
+        fillcolor: '#3B82F6',
+        line: {
+          width: 0.5,
+          color: '#3B82F6'
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.congestion),
+        name: 'Congestion',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        stackgroup: 'one',
+        fillcolor: '#EF4444',
+        line: {
+          width: 0.5,
+          color: '#EF4444'
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.losses),
+        name: 'Losses',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        stackgroup: 'one',
+        fillcolor: '#F59E0B',
+        line: {
+          width: 0.5,
+          color: '#F59E0B'
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.totalLMP),
+        name: 'Total LMP',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        line: {
+          color: '#000000',
+          width: 2
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      }
+    ];
 
-  // Formatter for tooltip to show date and hour
-  const formatTooltipLabel = (label: string) => {
-    const date = new Date(label);
-    return `${date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })} at ${date.toLocaleTimeString('en-US', { 
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true 
-    })}`;
-  };
+    return traces;
+  }, [data]);
+
+  // Plotly layout configuration
+  const layout: any = useMemo(() => ({
+    height: 500,
+    margin: { l: 80, r: 40, t: 40, b: 70 },
+    xaxis: {
+      title: { text: '' },
+      tickformat: '%b %d',
+      tickangle: 0,
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      },
+      showspikes: true,
+      spikemode: 'across',
+      spikethickness: 1,
+      spikecolor: '#9CA3AF',
+      spikedash: 'solid',
+      hoverformat: '<b style="font-size: 14px;">%b %d, %Y at %I:%M %p</b><br>'
+    },
+    yaxis: {
+      title: {
+        text: '$/MWh',
+        font: {
+          size: 14,
+          color: '#4B5563',
+          family: 'Inter, sans-serif'
+        }
+      },
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      }
+    },
+    hovermode: 'x unified',
+    hoverlabel: {
+      bgcolor: 'white',
+      bordercolor: '#E5E7EB',
+      font: {
+        family: 'Inter, sans-serif',
+        size: 13
+      },
+      namelength: -1
+    },
+    legend: {
+      orientation: 'h',
+      yanchor: 'bottom',
+      y: 1.02,
+      xanchor: 'left',
+      x: 0,
+      font: {
+        size: 13,
+        family: 'Inter, sans-serif'
+      }
+    },
+    plot_bgcolor: 'white',
+    paper_bgcolor: 'white',
+    font: {
+      family: 'Inter, sans-serif',
+      size: 13,
+      color: '#6B7280'
+    }
+  }), []);
+
+  // Plotly config for interactivity
+  const config: any = useMemo(() => ({
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d'] as any,
+    displaylogo: false,
+    responsive: true,
+    toImageButtonOptions: {
+      format: 'png',
+      filename: 'zone_lmp_chart',
+      height: 600,
+      width: 1200,
+      scale: 2
+    }
+  }), []);
 
   return (
     <div className="bg-white border-l-4 border-gs-green-500 rounded-lg shadow-gs-sm p-6">
@@ -158,82 +289,31 @@ const ZoneLMPChart: React.FC = () => {
         </div>
       </div>
 
-      {loading && <div className="text-gray-600">Loading chart data...</div>}
-      {error && <div className="text-red-600">Error: {error}</div>}
+      {loading && <div className="text-gs-gray-500">Loading chart data...</div>}
+      {error && <div className="text-gs-red-500">Error: {error}</div>}
       
-      {!loading && !error && selectedZone && data.length > 0 && (
+      {!Plot && !loading && !error && (
+        <div className="text-gs-gray-500">Loading chart library...</div>
+      )}
+      
+      {!loading && !error && selectedZone && data.length > 0 && Plot && (
         <div style={{ width: '100%', height: '500px' }}>
-          <ResponsiveContainer>
-            <ComposedChart data={data} margin={{ top: 20, right: 30, left: 60, bottom: 25 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
-              <XAxis 
-                dataKey="datetime"
-                tickFormatter={formatDateTick}
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                interval={23}
-                height={50}
-              />
-              <YAxis 
-                label={{ 
-                  value: '$/MWh', 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  style: { textAnchor: 'middle' }
-                }}
-              />
-              <Tooltip 
-                formatter={formatTooltip}
-                labelFormatter={formatTooltipLabel}
-              />
-              <Legend 
-                formatter={(value) => {
-                  if (value === 'totalLMP') return 'Total LMP';
-                  return value.charAt(0).toUpperCase() + value.slice(1);
-                }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="energy" 
-                stackId="1" 
-                stroke="#3B82F6" 
-                fill="#3B82F6" 
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="congestion" 
-                stackId="1" 
-                stroke="#EF4444" 
-                fill="#EF4444" 
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="losses" 
-                stackId="1" 
-                stroke="#F59E0B" 
-                fill="#F59E0B" 
-                fillOpacity={0.6}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="totalLMP" 
-                stroke="#000000" 
-                strokeWidth={2}
-                dot={false}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
+          <Plot
+            data={plotlyData}
+            layout={layout}
+            config={config}
+            style={{ width: '100%', height: '100%' }}
+            useResizeHandler={true}
+          />
         </div>
       )}
 
       {!loading && !error && selectedZone && data.length === 0 && (
-        <div className="text-gray-600">No data available for the selected zone.</div>
+        <div className="text-gs-gray-500">No data available for the selected zone.</div>
       )}
 
       {!loading && !error && !selectedZone && (
-        <div className="text-gray-600">Please select a zone to view LMP data.</div>
+        <div className="text-gs-gray-500">Please select a zone to view LMP data.</div>
       )}
     </div>
   );

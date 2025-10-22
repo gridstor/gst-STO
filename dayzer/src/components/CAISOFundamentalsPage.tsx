@@ -4,8 +4,7 @@ import ScenarioInfo from './common/ScenarioInfo';
 import MECOverviewWrapper from './common/MECOverviewWrapper';
 import ZoneDemandChart from './common/ZoneDemandChart';
 import NetLoadChart from './common/NetLoadChart';
-import WeeklyLoadComparison from './common/WeeklyLoadComparison';
-import WeekOverview from './common/WeekOverview';
+import InteractiveFundamentalsCards from './common/InteractiveFundamentalsCards';
 import ZoneLMPChart from './common/ZoneLMPChart';
 import SupplyStackChart from './common/SupplyStackChart';
 
@@ -28,47 +27,22 @@ export default function CAISOFundamentalsPage() {
           
           <div className="space-y-12">
             
-            {/* Zone Demand Chart */}
-            <section className="mb-12">
+            {/* Weekly Analysis with Interactive Cards */}
+            <section id="weekly-analysis" className="mb-12 scroll-mt-24">
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Total Demand by Zone</h2>
-                <p className="text-gs-gray-600">Hourly demand forecast across CAISO zones</p>
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Weekly Fundamentals Comparison</h2>
+                <p className="text-gs-gray-600">Click on a card to view weekly comparison chart</p>
               </div>
-              <ZoneDemandChart />
+              <InteractiveFundamentalsCards />
             </section>
             
             {/* Net Load Chart */}
             <section className="mb-12">
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Net Load Forecast</h2>
-                <p className="text-gs-gray-600">System net load after renewable generation</p>
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Fundamentals Forecast</h2>
+                <p className="text-gs-gray-600">System load, net load, and renewables generation forecast</p>
               </div>
               <NetLoadChart />
-            </section>
-            
-            {/* Weekly Load Comparison and Week Overview */}
-            <section className="mb-12">
-              <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Weekly Analysis</h2>
-                <p className="text-gs-gray-600">Load comparison and fundamentals overview</p>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <WeeklyLoadComparison />
-                </div>
-                <div className="lg:col-span-1">
-                  <WeekOverview />
-                </div>
-              </div>
-            </section>
-            
-            {/* Zone LMP Chart */}
-            <section className="mb-12">
-              <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Locational Marginal Pricing</h2>
-                <p className="text-gs-gray-600">LMP forecast by zone</p>
-              </div>
-              <ZoneLMPChart />
             </section>
             
             {/* Supply Stack Chart */}
@@ -80,11 +54,29 @@ export default function CAISOFundamentalsPage() {
               <SupplyStackChart />
             </section>
             
+            {/* Zone Demand Chart */}
+            <section className="mb-12">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Total Demand by Zone</h2>
+                <p className="text-gs-gray-600">Hourly demand forecast across CAISO zones</p>
+              </div>
+              <ZoneDemandChart />
+            </section>
+            
+            {/* Zone LMP Chart */}
+            <section className="mb-12">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Locational Marginal Pricing</h2>
+                <p className="text-gs-gray-600">LMP forecast by zone</p>
+              </div>
+              <ZoneLMPChart />
+            </section>
+            
             {/* MEC Overview - Full Width at Bottom */}
             <section>
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Marginal Energy Cost</h2>
-                <p className="text-gs-gray-600">MEC trends for top and bottom hours</p>
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Marginal Energy Component</h2>
+                <p className="text-gs-gray-600">Marginal Energy Component for Top 2 and Bottom 2 Hours</p>
               </div>
               <MECOverviewWrapper />
             </section>

@@ -76,7 +76,13 @@ const ZoneDemandChart: React.FC = () => {
   const plotlyData = useMemo(() => {
     if (data.length === 0 || availableZones.length === 0) return [];
 
-    return availableZones.map((zone) => ({
+    // Calculate totals for each time point
+    const totals = data.map(d => {
+      return availableZones.reduce((sum, zone) => sum + (Number(d[zone]) || 0), 0);
+    });
+
+    // Create traces for each zone
+    const zoneTraces = availableZones.map((zone) => ({
       x: data.map(d => d.datetime),
       y: data.map(d => Number(d[zone]) || 0),
       name: zone,
@@ -88,29 +94,62 @@ const ZoneDemandChart: React.FC = () => {
         width: 0.5,
         color: zoneColors[zone] || '#6B7280'
       },
-      hovertemplate: '<b>%{fullData.name}</b><br>' +
-                     '%{y:.2f} GW<br>' +
-                     '<extra></extra>'
+      hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f} GW<br><extra></extra>'
     }));
+
+    // Add an invisible trace for total demand (shown only in tooltip)
+    const totalTrace = {
+      x: data.map(d => d.datetime),
+      y: totals,
+      name: 'Total Demand',
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      line: {
+        width: 0,
+        color: 'rgba(0,0,0,0)'
+      },
+      showlegend: false,
+      hovertemplate: '<b>Total Demand</b><br>%{y:.2f} GW<br><extra></extra>'
+    };
+
+    return [...zoneTraces, totalTrace];
   }, [data, availableZones]);
 
   // Plotly layout configuration
   const layout: any = useMemo(() => ({
     height: 500,
-    margin: { l: 70, r: 40, t: 40, b: 60 },
+    margin: { l: 80, r: 40, t: 40, b: 70 },
     xaxis: {
       title: { text: '' },
       tickformat: '%b %d',
-      tickangle: -45,
+      tickangle: 0,
       showgrid: true,
       gridcolor: '#E5E7EB',
       zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      },
+      showspikes: true,
+      spikemode: 'across',
+      spikethickness: 1,
+      spikecolor: '#9CA3AF',
+      spikedash: 'solid',
+      hoverformat: '<b style="font-size: 14px;">%b %d, %Y at %I:%M %p</b><br>'
     },
     yaxis: {
       title: {
         text: 'Demand (GW)',
         font: {
-          size: 12,
+          size: 14,
           color: '#4B5563',
           family: 'Inter, sans-serif'
         }
@@ -118,6 +157,18 @@ const ZoneDemandChart: React.FC = () => {
       showgrid: true,
       gridcolor: '#E5E7EB',
       zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      }
     },
     hovermode: 'x unified',
     hoverlabel: {
@@ -125,17 +176,18 @@ const ZoneDemandChart: React.FC = () => {
       bordercolor: '#E5E7EB',
       font: {
         family: 'Inter, sans-serif',
-        size: 12
-      }
+        size: 13
+      },
+      namelength: -1
     },
     legend: {
       orientation: 'h',
       yanchor: 'bottom',
       y: 1.02,
-      xanchor: 'right',
-      x: 1,
+      xanchor: 'left',
+      x: 0,
       font: {
-        size: 11,
+        size: 13,
         family: 'Inter, sans-serif'
       }
     },
@@ -143,7 +195,7 @@ const ZoneDemandChart: React.FC = () => {
     paper_bgcolor: 'white',
     font: {
       family: 'Inter, sans-serif',
-      size: 11,
+      size: 13,
       color: '#6B7280'
     }
   }), []);
