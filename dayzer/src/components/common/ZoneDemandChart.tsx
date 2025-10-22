@@ -1,15 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useScenario } from '../../contexts/ScenarioContext';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
 
 interface ZoneDemandDataPoint {
   datetime: string;
@@ -27,6 +17,14 @@ const ZoneDemandChart: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableZones, setAvailableZones] = useState<string[]>([]);
+  const [Plot, setPlot] = useState<any>(null);
+  
+  // Load Plotly only on client side
+  useEffect(() => {
+    import('react-plotly.js').then((module) => {
+      setPlot(() => module.default);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,34 +64,7 @@ const ZoneDemandChart: React.FC = () => {
     fetchData();
   }, [selectedScenario]);
 
-  const formatTooltip = (value: number, name: string) => {
-    return [`${value.toFixed(2)} GW`, name];
-  };
-
-  // Custom tick formatter to show clean date progression
-  const formatDateTick = (tickItem: string) => {
-    const date = new Date(tickItem);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric'
-    });
-  };
-
-  // New formatter for tooltip to show date and hour
-  const formatTooltipLabel = (label: string) => {
-    const date = new Date(label);
-    return `${date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })} at ${date.toLocaleTimeString('en-US', { 
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true 
-    })}`;
-  };
-
-  // Color mapping for different zones
+  // Color mapping for different zones (GridStor palette)
   const zoneColors: { [key: string]: string } = {
     'Pacific Gas & Electric': '#3B82F6',
     'San Diego Gas & Electric': '#EF4444', 
@@ -101,59 +72,122 @@ const ZoneDemandChart: React.FC = () => {
     'Valley Electric Association': '#F59E0B',
   };
 
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-      <h2 className="text-xl font-semibold text-gray-800 mb-6">Hourly Zone Demand</h2>
+  // Prepare Plotly data traces
+  const plotlyData = useMemo(() => {
+    if (data.length === 0 || availableZones.length === 0) return [];
 
-      {loading && <div className="text-gray-600">Loading chart data...</div>}
-      {error && <div className="text-red-600">Error: {error}</div>}
+    return availableZones.map((zone) => ({
+      x: data.map(d => d.datetime),
+      y: data.map(d => Number(d[zone]) || 0),
+      name: zone,
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      stackgroup: 'one',
+      fillcolor: zoneColors[zone] || '#6B7280',
+      line: {
+        width: 0.5,
+        color: zoneColors[zone] || '#6B7280'
+      },
+      hovertemplate: '<b>%{fullData.name}</b><br>' +
+                     '%{y:.2f} GW<br>' +
+                     '<extra></extra>'
+    }));
+  }, [data, availableZones]);
+
+  // Plotly layout configuration
+  const layout: any = useMemo(() => ({
+    height: 500,
+    margin: { l: 70, r: 40, t: 40, b: 60 },
+    xaxis: {
+      title: { text: '' },
+      tickformat: '%b %d',
+      tickangle: -45,
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+    },
+    yaxis: {
+      title: {
+        text: 'Demand (GW)',
+        font: {
+          size: 12,
+          color: '#4B5563',
+          family: 'Inter, sans-serif'
+        }
+      },
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+    },
+    hovermode: 'x unified',
+    hoverlabel: {
+      bgcolor: 'white',
+      bordercolor: '#E5E7EB',
+      font: {
+        family: 'Inter, sans-serif',
+        size: 12
+      }
+    },
+    legend: {
+      orientation: 'h',
+      yanchor: 'bottom',
+      y: 1.02,
+      xanchor: 'right',
+      x: 1,
+      font: {
+        size: 11,
+        family: 'Inter, sans-serif'
+      }
+    },
+    plot_bgcolor: 'white',
+    paper_bgcolor: 'white',
+    font: {
+      family: 'Inter, sans-serif',
+      size: 11,
+      color: '#6B7280'
+    }
+  }), []);
+
+  // Plotly config for interactivity
+  const config: any = useMemo(() => ({
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d'] as any,
+    displaylogo: false,
+    responsive: true,
+    toImageButtonOptions: {
+      format: 'png',
+      filename: 'zone_demand_chart',
+      height: 600,
+      width: 1200,
+      scale: 2
+    }
+  }), []);
+
+  return (
+    <div className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
+      <h3 className="text-lg font-semibold text-gs-gray-900 mb-6">Hourly Zone Demand</h3>
+
+      {loading && <div className="text-gs-gray-500">Loading chart data...</div>}
+      {error && <div className="text-gs-red-500">Error: {error}</div>}
       
-      {!loading && !error && data.length > 0 && (
+      {!Plot && !loading && !error && (
+        <div className="text-gs-gray-500">Loading chart library...</div>
+      )}
+      
+      {!loading && !error && data.length > 0 && Plot && (
         <div style={{ width: '100%', height: '500px' }}>
-          <ResponsiveContainer>
-            <AreaChart data={data} margin={{ top: 20, right: 30, left: 60, bottom: 25 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
-              <XAxis 
-                dataKey="datetime"
-                tickFormatter={formatDateTick}
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                interval={23}
-                height={50}
-              />
-              <YAxis 
-                label={{ 
-                  value: 'Demand (GW)', 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  style: { textAnchor: 'middle' }
-                }}
-              />
-              <Tooltip 
-                formatter={formatTooltip}
-                labelFormatter={formatTooltipLabel}
-              />
-              <Legend />
-              
-              {/* Render areas for each zone */}
-              {availableZones.map((zone, index) => (
-                <Area
-                  key={zone}
-                  type="monotone"
-                  dataKey={zone}
-                  stackId="1"
-                  stroke={zoneColors[zone] || '#6B7280'}
-                  fill={zoneColors[zone] || '#6B7280'}
-                  fillOpacity={0.6}
-                />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
+          <Plot
+            data={plotlyData}
+            layout={layout}
+            config={config}
+            style={{ width: '100%', height: '100%' }}
+            useResizeHandler={true}
+          />
         </div>
       )}
 
       {!loading && !error && data.length === 0 && (
-        <div className="text-gray-600">No zone demand data available.</div>
+        <div className="text-gs-gray-500">No zone demand data available.</div>
       )}
     </div>
   );

@@ -192,9 +192,9 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
   }, []);
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+    <div className="bg-white border-l-4 border-gs-green-500 rounded-lg shadow-gs-sm p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Weekly Load Comparison</h2>
+        <h3 className="text-lg font-semibold text-gs-gray-900">Weekly Load Comparison</h3>
         <select
           value={selectedMetric}
           onChange={handleMetricChange}

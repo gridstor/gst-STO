@@ -12,41 +12,85 @@ import SupplyStackChart from './common/SupplyStackChart';
 export default function CAISOFundamentalsPage() {
   return (
     <ScenarioProvider>
-      <div className="space-y-6">
-        {/* Page Title */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">CAISO System</h1>
-          <p className="mt-2 text-sm text-gray-600">System-wide Fundamentals Forecast of Load, Net Load, and Generation</p>
-        </div>
-        
-        {/* Scenario Info Container */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <ScenarioInfo />
-        </div>
-        
-        {/* Charts without container wrapper */}
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 gap-8">
-            <ZoneDemandChart />
-            <NetLoadChart />
+      <div className="py-12 space-y-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Page Header */}
+          <div className="mb-12">
+            <h1 className="text-3xl font-bold text-gs-gray-900 mb-2">CAISO System</h1>
+            <p className="text-gs-gray-600">System-wide fundamentals forecast of load, net load, and generation</p>
+          </div>
+          
+          {/* Scenario Info Container */}
+          <div className="mb-12 bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm">
+            <ScenarioInfo />
+          </div>
+          
+          <div className="space-y-12">
             
-            {/* Weekly Load Comparison and Week Overview in 2/3 + 1/3 layout */}
-            <div className="grid grid-cols-3 gap-8">
-              <div className="col-span-2">
-                <WeeklyLoadComparison />
+            {/* Zone Demand Chart */}
+            <section className="mb-12">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Total Demand by Zone</h2>
+                <p className="text-gs-gray-600">Hourly demand forecast across CAISO zones</p>
               </div>
-              <div className="col-span-1">
-                <WeekOverview />
-              </div>
-            </div>
+              <ZoneDemandChart />
+            </section>
             
-            <ZoneLMPChart />
-            <SupplyStackChart />
+            {/* Net Load Chart */}
+            <section className="mb-12">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Net Load Forecast</h2>
+                <p className="text-gs-gray-600">System net load after renewable generation</p>
+              </div>
+              <NetLoadChart />
+            </section>
+            
+            {/* Weekly Load Comparison and Week Overview */}
+            <section className="mb-12">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Weekly Analysis</h2>
+                <p className="text-gs-gray-600">Load comparison and fundamentals overview</p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <WeeklyLoadComparison />
+                </div>
+                <div className="lg:col-span-1">
+                  <WeekOverview />
+                </div>
+              </div>
+            </section>
+            
+            {/* Zone LMP Chart */}
+            <section className="mb-12">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Locational Marginal Pricing</h2>
+                <p className="text-gs-gray-600">LMP forecast by zone</p>
+              </div>
+              <ZoneLMPChart />
+            </section>
+            
+            {/* Supply Stack Chart */}
+            <section className="mb-12">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Generation Mix</h2>
+                <p className="text-gs-gray-600">Hourly generation by fuel type</p>
+              </div>
+              <SupplyStackChart />
+            </section>
+            
+            {/* MEC Overview - Full Width at Bottom */}
+            <section>
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Marginal Energy Cost</h2>
+                <p className="text-gs-gray-600">MEC trends for top and bottom hours</p>
+              </div>
+              <MECOverviewWrapper />
+            </section>
+            
           </div>
         </div>
-        
-        {/* MEC Overview - Full Width at Bottom */}
-        <MECOverviewWrapper />
       </div>
     </ScenarioProvider>
   );

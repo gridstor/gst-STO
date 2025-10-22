@@ -24,17 +24,20 @@
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
     "pg": "^8.16.3",
+    "plotly.js": "^3.1.2",
     "prisma": "^6.8.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
     "react-hot-toast": "^2.5.2",
+    "react-plotly.js": "^2.6.0",
     "recharts": "^2.15.3",
     "zod": "^3.25.34"
   },
   "devDependencies": {
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "@types/react-plotly.js": "^2.6.3",
     "typescript": "^5.8.3"
   }
 }

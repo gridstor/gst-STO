@@ -1,29 +1,43 @@
 ---
-import Navbar from '../components/common/Navbar';
+import { NavigationBar } from '../components/ui/NavigationBar';
+
+interface NavLink {
+  label: string;
+  href?: string;
+  dropdown?: NavLink[];
+  description?: string;
+}
+
 interface Props {
   title: string;
+  pageTitle?: string;
+  subNavLinks?: NavLink[];
 }
-const { title } = Astro.props;
+const { title, pageTitle, subNavLinks } = Astro.props;
+const currentPath = Astro.url.pathname;
 ---
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/new_favicon.png" />
     <link rel="shortcut icon" href="/new_favicon.png" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-gray-50 text-gs-dark font-sans min-h-screen">
-    <Navbar client:only="react" />
-    <main class="max-w-full mx-auto px-4 pt-6 pb-12 flex justify-center items-start min-h-[80vh]">
-      <div class="w-full max-w-full bg-white rounded-2xl shadow-md p-8">
-        <slot />
-      </div>
+  <body class="bg-gs-off-white text-gs-gray-900 font-sans min-h-screen">
+    <NavigationBar 
+      client:load 
+      currentPath={currentPath}
+      pageTitle={pageTitle}
+      subNavLinks={subNavLinks}
+    />
+    <main>
+      <slot />
     </main>
   </body>
 </html> 

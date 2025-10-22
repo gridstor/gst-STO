@@ -94,8 +94,8 @@ const NetLoadChart: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-      <h2 className="text-xl font-semibold text-gray-800 mb-6">Load</h2>
+    <div className="bg-white border-l-4 border-gs-purple-500 rounded-lg shadow-gs-sm p-6">
+      <h3 className="text-lg font-semibold text-gs-gray-900 mb-6">Net Load</h3>
 
       {loading && <div className="text-gray-600">Loading chart data...</div>}
       {error && <div className="text-red-600">Error: {error}</div>}

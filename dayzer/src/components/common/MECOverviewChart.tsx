@@ -132,12 +132,9 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="h-80 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-          <div className="text-gray-500">Loading MCE overview...</div>
-        </div>
-        <div className="h-80 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-          <div className="text-gray-500">Loading MCE overview...</div>
+      <div className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
+        <div className="flex items-center justify-center h-80 text-gs-gray-500">
+          <p>Loading MEC overview...</p>
         </div>
       </div>
     );
@@ -145,22 +142,18 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
 
   if (error) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="h-80 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-          <div className="text-red-500">Error: {error}</div>
-        </div>
-        <div className="h-80 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-          <div className="text-red-500">Error: {error}</div>
+      <div className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
+        <div className="flex items-center justify-center h-80 text-gs-red-500">
+          <p>Error: {error}</p>
         </div>
       </div>
     );
   }
 
-  // Split data into last week and this week
-  const lastWeekData = data.filter(d => d.isLastWeek);
+  // Filter to only This Week data
   const thisWeekData = data.filter(d => !d.isLastWeek);
 
-  // Calculate unified Y-axis domain using only This Week data (since Last Week shows "Coming Soon")
+  // Calculate Y-axis domain using This Week data
   const allValues = thisWeekData.flatMap(d => [d.topHoursMEC, d.bottomHoursMEC]);
   const minValue = allValues.length > 0 ? Math.min(...allValues) : 0;
   const maxValue = allValues.length > 0 ? Math.max(...allValues) : 100;
@@ -188,85 +181,101 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
 
   const yAxisTicks = generateYAxisTicks();
 
-  const renderChart = (chartData: MECData[], title: string, showYAxisLabel: boolean = false, isComingSoon: boolean = false, makeClickable: boolean = false) => {
-    const content = (
-      <>
-        <h3 className="text-lg font-medium text-gray-700 text-center">{title}</h3>
-      
-      {isComingSoon ? (
-        <div className="h-80 w-full bg-white rounded border border-gray-100 flex items-center justify-center">
-          <div className="text-gray-400 text-lg">Coming Soon</div>
-        </div>
-      ) : (
-        <div className="h-80 w-full bg-white rounded border border-gray-100 flex items-center justify-center">
-          <div className="w-full h-full p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={formatXAxisTick}
-                  stroke="#6b7280"
-                  fontSize={12}
-                  height={40}
-                />
-                <YAxis 
-                  domain={yAxisDomain}
-                  stroke="#6b7280"
-                  fontSize={12}
-                  tickFormatter={(value) => `$${value}`}
-                  ticks={yAxisTicks}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                
-                <Line
-                  type="monotone"
-                  dataKey="topHoursMEC"
-                  stroke="#dc2626"
-                  strokeWidth={2}
-                  dot={{ fill: '#dc2626', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name="Top 2 Hours"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="bottomHoursMEC"
-                  stroke="#2563eb"
-                  strokeWidth={2}
-                  dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name="Bottom 2 Hours"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+  const ChartContent = () => (
+    <div className="w-full h-full">
+      <ResponsiveContainer width="100%" height={400}>
+        <LineChart data={thisWeekData} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis 
+            dataKey="date" 
+            tickFormatter={formatXAxisTick}
+            stroke="#6b7280"
+            fontSize={12}
+          />
+          <YAxis 
+            domain={yAxisDomain}
+            stroke="#6b7280"
+            fontSize={12}
+            tickFormatter={(value) => `$${value}`}
+            ticks={yAxisTicks}
+            label={{ 
+              value: '$/MWh', 
+              angle: -90, 
+              position: 'insideLeft',
+              style: { 
+                textAnchor: 'middle',
+                fill: '#4B5563',
+                fontSize: 12,
+                fontWeight: 600
+              }
+            }}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          
+          <Line
+            type="monotone"
+            dataKey="topHoursMEC"
+            stroke="#dc2626"
+            strokeWidth={2}
+            dot={{ fill: '#dc2626', strokeWidth: 2, r: 4 }}
+            activeDot={{ r: 6 }}
+            name="Top 2 Hours"
+          />
+          <Line
+            type="monotone"
+            dataKey="bottomHoursMEC"
+            stroke="#2563eb"
+            strokeWidth={2}
+            dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
+            activeDot={{ r: 6 }}
+            name="Bottom 2 Hours"
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  // If no scenarioId provided (homepage), make it clickable
+  if (scenarioId === undefined) {
+    return (
+      <a 
+        href="/short-term-outlook/caiso-system#mec-overview"
+        className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm hover:shadow-gs-lg transition-shadow duration-gs-base p-6 block cursor-pointer"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gs-gray-900">This Week</h3>
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-0.5 bg-gs-red-600"></div>
+              <span className="text-gs-gray-600">Top 2 Hours</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-0.5 bg-gs-blue-600"></div>
+              <span className="text-gs-gray-600">Bottom 2 Hours</span>
+            </div>
           </div>
         </div>
-      )}
-      </>
+        <ChartContent />
+      </a>
     );
-    
-    if (makeClickable) {
-      return (
-        <a 
-          href="/short-term-outlook/caiso-system#mec-overview"
-          className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 flex flex-col hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
-        >
-          {content}
-        </a>
-      );
-    }
-    
-    return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 flex flex-col">
-        {content}
-      </div>
-    );
-  };
+  }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {renderChart(lastWeekData, "Last Week", true, true, scenarioId === undefined)}
-      {renderChart(thisWeekData, "This Week", true, false, scenarioId === undefined)}
+    <div className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-gs-gray-900">This Week</h3>
+        <div className="flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-0.5 bg-gs-red-600"></div>
+            <span className="text-gs-gray-600">Top 2 Hours</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-0.5 bg-gs-blue-600"></div>
+            <span className="text-gs-gray-600">Bottom 2 Hours</span>
+          </div>
+        </div>
+      </div>
+      <ChartContent />
     </div>
   );
 } 

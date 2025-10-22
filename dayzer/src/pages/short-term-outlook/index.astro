@@ -1,8 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { SectionHeader } from '../../components/ui/SectionHeader';
 import MECOverviewChart from '../../components/common/MECOverviewChart';
 import TB26Display from '../../components/common/TB26Display';
 import FundamentalsOverview from '../../components/common/FundamentalsOverview';
+import { LocationSelectorWrapper } from '../../components/common/LocationSelectorWrapper';
 
 // Get the correct base URL for API calls
 const getBaseUrl = () => {
@@ -91,170 +93,151 @@ const getDateRangeLabel = (data: any[]) => {
 // Get current month index (0 = Jan, 11 = Dec)
 const currentMonthIndex = new Date().getMonth();
 const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long' });
----
-<Layout title="Short Term Outlook">
-  <div class="text-center space-y-4">
-    
-    {/* TB2.6 Performance Overview with Collapsible Restrictions */}
-    <TB26Display tb26Data={tb26Data} client:load />
-    
-    {/* Fundamentals Overview */}
-    <FundamentalsOverview client:load />
 
-    {/* Congestion Analysis - NEW SECTION */}
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-6xl mx-auto">
-      <div class="text-center mb-6">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-2">Weekly Congestion</h2>
-        <div class="flex flex-wrap justify-center gap-6 text-sm">
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 bg-red-500 rounded"></div>
-            <span class="text-gray-600">Positive Congestion</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 bg-blue-400 rounded"></div>
-            <span class="text-gray-600">Negative Congestion</span>
-          </div>
+// Define sub-navigation for Short Term Outlook
+const subNavLinks: Array<{ label: string; href?: string; dropdown?: Array<{ label: string; href: string; description?: string }> }> = [
+  { 
+    label: 'CAISO Forecast',
+    dropdown: [
+      { label: 'CAISO System', href: '/short-term-outlook/caiso-system', description: 'System-wide fundamentals and forecasts' },
+      { label: 'Goleta', href: '/short-term-outlook/goleta', description: 'Location-specific pricing and congestion analysis' },
+    ]
+  },
+  { label: 'Weekly Insight', href: '/short-term-outlook/weekly-insight' },
+  { label: 'Likeday Tool', href: '/short-term-outlook/likeday' },
+];
+---
+<Layout title="Short Term Outlook" pageTitle="Short Term Outlook" subNavLinks={subNavLinks}>
+  
+  <div class="py-12 space-y-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      {/* Location Selector */}
+      <div class="mb-12 bg-white border-l-4 border-indigo-600 rounded-lg shadow-md p-6">
+        <LocationSelectorWrapper 
+          client:load
+          locations={[
+            { id: 'caiso-goleta', name: 'Goleta', market: 'CAISO' },
+            { id: 'ercot-hidden-lakes', name: 'Hidden Lakes', market: 'ERCOT' }
+          ]}
+          defaultLocation="caiso-goleta"
+        />
+      </div>
+      
+      {/* Coming Soon Message (hidden by default) */}
+      <div id="coming-soon-message" class="hidden mb-12 bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-12">
+        <div class="text-center">
+          <h2 class="text-3xl font-semibold text-gs-gray-900 mb-4">Coming Soon</h2>
+          <p class="text-lg text-gs-gray-600">Data for ERCOT - Hidden Lakes will be available soon.</p>
         </div>
       </div>
       
-      {weeklyCongestionData ? (
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Last Week Chart */}
-          <a 
-            href="/short-term-outlook/goleta#weekly-congestion"
-            class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 block hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
-          >
-            <h3 class="text-lg font-medium text-gray-700 text-center">
-              Last Week
-            </h3>
-            
-            {/* Top 2 Hours Stacked Bar */}
-            <div class="space-y-3">
-              <div class="flex justify-between text-sm text-gray-600">
-                <span class="font-medium">Top 2 Hours</span>
-              </div>
-              
-              <div class="relative">
-                <div class="flex h-12 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                  {/* Placeholder for Last Week - not implemented yet */}
-                  <div class="flex-1 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-                    Coming Soon
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom 2 Hours Stacked Bar */}
-            <div class="space-y-3">
-              <div class="flex justify-between text-sm text-gray-600">
-                <span class="font-medium">Bottom 2 Hours</span>
-              </div>
-              
-              <div class="relative">
-                <div class="flex h-12 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                  {/* Placeholder for Last Week - not implemented yet */}
-                  <div class="flex-1 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-                    Coming Soon
-                  </div>
-                </div>
-              </div>
-            </div>
-          </a>
-
-          {/* This Week Chart */}
-          <a 
-            href="/short-term-outlook/goleta#weekly-congestion"
-            class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4 block hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
-          >
-            <h3 class="text-lg font-medium text-gray-700 text-center">
-              This Week
-            </h3>
-            
-            {/* Top 2 Hours Stacked Bar */}
-            <div class="space-y-3">
-              <div class="flex justify-between text-sm text-gray-600">
-                <span class="font-medium">Top 2 Hours</span>
-              </div>
-              
-              <div class="relative">
-                <div class="flex h-12 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                  {weeklyCongestionData.thisWeek.map((day: any) => (
-                    <div 
-                      class={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.topHours.avgCongestion)}`}
-                      style="width: 14.3%;" 
-                      title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.topHours.avgCongestion)}/MWh - ${day.topHours.constraintName}`}
-                    >
-                      {formatDateDisplay(day.date)}<br/>${formatCongestionValue(day.topHours.avgCongestion)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom 2 Hours Stacked Bar */}
-            <div class="space-y-3">
-              <div class="flex justify-between text-sm text-gray-600">
-                <span class="font-medium">Bottom 2 Hours</span>
-              </div>
-              
-              <div class="relative">
-                <div class="flex h-12 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                  {weeklyCongestionData.thisWeek.map((day: any) => (
-                    <div 
-                      class={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.bottomHours.avgCongestion)}`}
-                      style="width: 14.3%;" 
-                      title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.bottomHours.avgCongestion)}/MWh - ${day.bottomHours.constraintName}`}
-                    >
-                      {formatDateDisplay(day.date)}<br/>${formatCongestionValue(day.bottomHours.avgCongestion)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </a>
+      {/* All Data Sections (shown by default for CAISO - Goleta) */}
+      <div id="caiso-goleta-content">
+      
+      {/* TB2.6 Performance Overview Section */}
+      <section class="mb-12">
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold text-gs-gray-900 mb-2">Goleta TB2.6 Performance Overview</h2>
+          <p class="text-gs-gray-600">Based on 60MW/160MWh Battery with 86% Round-Trip Efficiency, Day-Ahead Pricing</p>
         </div>
-      ) : (
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Error/Loading State */}
-          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
-            <h3 class="text-lg font-medium text-gray-700 text-center">Last Week</h3>
-            <div class="flex items-center justify-center h-24 text-gray-500">
-              <p>Loading congestion data...</p>
+        <TB26Display tb26Data={tb26Data} client:load />
+      </section>
+      
+      {/* Fundamentals Overview Section */}
+      <section class="mb-12">
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold text-gs-gray-900 mb-2">System Fundamentals</h2>
+          <p class="text-gs-gray-600">Fundamentals Comparison of Last Week's Results vs. This Week's Forecast</p>
+        </div>
+        <FundamentalsOverview client:load />
+      </section>
+
+      {/* Congestion Analysis Section */}
+      <section class="mb-12">
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold text-gs-gray-900 mb-2">Weekly Congestion</h2>
+          <p class="text-gs-gray-600">Impactful Constraints During Top 2 and Bottom 2 Hours</p>
+        </div>
+      
+      {weeklyCongestionData ? (
+        <a 
+          href="/short-term-outlook/goleta#weekly-congestion"
+          class="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm hover:shadow-gs-lg transition-shadow duration-gs-base p-6 block cursor-pointer"
+        >
+          <h3 class="text-lg font-semibold text-gs-gray-900 mb-6">
+            This Week
+          </h3>
+          
+          {/* Top 2 Hours Stacked Bar */}
+          <div class="space-y-3 mb-6">
+            <div class="flex justify-between text-sm text-gs-gray-600">
+              <span class="font-medium uppercase tracking-wide">Top 2 Hours</span>
+            </div>
+            
+            <div class="relative">
+              <div class="flex h-12 rounded-lg overflow-hidden shadow-gs-sm border border-gs-gray-200 font-mono">
+                {weeklyCongestionData.thisWeek.map((day: any) => (
+                  <div 
+                    class={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.topHours.avgCongestion)}`}
+                    style="width: 14.3%;" 
+                    title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.topHours.avgCongestion)}/MWh
+Hours: ${day.topHours.hours.join(', ')}
+Constraint: ${day.topHours.constraintName}`}
+                  >
+                    {formatDateDisplay(day.date)}<br/>${formatCongestionValue(day.topHours.avgCongestion)}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
-            <h3 class="text-lg font-medium text-gray-700 text-center">This Week</h3>
-            <div class="flex items-center justify-center h-24 text-gray-500">
-              <p>Loading congestion data...</p>
+
+          {/* Bottom 2 Hours Stacked Bar */}
+          <div class="space-y-3">
+            <div class="flex justify-between text-sm text-gs-gray-600">
+              <span class="font-medium uppercase tracking-wide">Bottom 2 Hours</span>
             </div>
+            
+            <div class="relative">
+              <div class="flex h-12 rounded-lg overflow-hidden shadow-gs-sm border border-gs-gray-200 font-mono">
+                {weeklyCongestionData.thisWeek.map((day: any) => (
+                  <div 
+                    class={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.bottomHours.avgCongestion)}`}
+                    style="width: 14.3%;" 
+                    title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.bottomHours.avgCongestion)}/MWh
+Hours: ${day.bottomHours.hours.join(', ')}
+Constraint: ${day.bottomHours.constraintName}`}
+                  >
+                    {formatDateDisplay(day.date)}<br/>${formatCongestionValue(day.bottomHours.avgCongestion)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </a>
+      ) : (
+        <div class="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
+          <h3 class="text-lg font-semibold text-gs-gray-900 mb-4">This Week</h3>
+          <div class="flex items-center justify-center h-24 text-gs-gray-500">
+            <p>Loading congestion data...</p>
           </div>
         </div>
       )}
-
-
-    </div>
-    
-    {/* MCE Overview - NEW SECTION */}
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-6xl mx-auto">
-      <div class="text-center mb-6">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-2">MEC Overview</h2>
-        <div class="flex flex-wrap justify-center gap-8 text-sm">
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-0.5 bg-red-600"></div>
-            <span class="text-gray-600">Top 2 Hours</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-0.5 bg-blue-600"></div>
-            <span class="text-gray-600">Bottom 2 Hours</span>
-          </div>
-        </div>
-      </div>
+      </section>
       
-      <div class="space-y-4">
-        {/* React Chart Component - Will be wrapped to make clickable sections */}
+      {/* MEC Overview Section */}
+      <section>
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold text-gs-gray-900 mb-2">Marginal Energy Component</h2>
+          <p class="text-gs-gray-600">Marginal Energy Component for Top 2 and Bottom 2 Hours</p>
+        </div>
+        
         <MECOverviewChart client:load />
+      </section>
+      
       </div>
+      {/* End of CAISO - Goleta content */}
+      
     </div>
-    
   </div>
 </Layout>

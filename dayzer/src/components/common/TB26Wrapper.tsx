@@ -16,3 +16,4 @@ export default function TB26Wrapper() {
   return <TB26Display tb26Data={null} scenarioId={selectedScenario.scenarioid} />;
 }
 
+

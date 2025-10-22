@@ -146,9 +146,9 @@ const WeekOverview: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 h-full">
+    <div className="bg-white border-l-4 border-gs-purple-500 rounded-lg shadow-gs-sm p-6 h-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Week Overview</h2>
+        <h3 className="text-lg font-semibold text-gs-gray-900">Week Overview</h3>
         
         {/* Hour Filter Dropdown */}
         <div className="relative hour-filter-dropdown">

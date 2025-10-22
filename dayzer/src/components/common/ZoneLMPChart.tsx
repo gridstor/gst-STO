@@ -135,9 +135,9 @@ const ZoneLMPChart: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+    <div className="bg-white border-l-4 border-gs-green-500 rounded-lg shadow-gs-sm p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">Zone LMP Components</h2>
+        <h3 className="text-lg font-semibold text-gs-gray-900">Zone LMP Components</h3>
         <div className="flex items-center space-x-2">
           <label htmlFor="zone-select" className="text-sm font-medium text-gray-700">
             Select Zone:

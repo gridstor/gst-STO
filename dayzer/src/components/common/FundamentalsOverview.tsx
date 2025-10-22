@@ -42,8 +42,8 @@ export default function FundamentalsOverview() {
 
   if (loading) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-6xl mx-auto">
-        <div className="text-center text-gray-500">Loading fundamentals overview...</div>
+      <div className="bg-white border border-gs-gray-200 rounded-lg shadow-gs-sm p-6">
+        <div className="text-center text-gs-gray-500">Loading fundamentals overview...</div>
       </div>
     );
   }
@@ -59,62 +59,100 @@ export default function FundamentalsOverview() {
   };
 
   const getTrendColor = (trend: string) => {
-    if (trend === 'up') return 'text-green-600';
-    if (trend === 'down') return 'text-red-600';
-    return 'text-gray-600';
+    if (trend === 'up') return 'text-gs-green-600';
+    if (trend === 'down') return 'text-gs-red-600';
+    return 'text-gs-gray-600';
+  };
+
+  const getAccentColor = (component: string) => {
+    if (component === 'Total Demand') return 'border-gs-gray-700';
+    if (component === 'Net Load') return 'border-gs-purple-500';
+    if (component === 'Renewable Generation') return 'border-gs-green-500';
+    return 'border-gs-purple-500'; // fallback
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 max-w-6xl mx-auto">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-2">Fundamentals Overview</h2>
-        <p className="text-sm text-gray-600">This Week vs Last Week Comparison</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {data.map((item, index) => (
-          <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-            <h3 className="text-lg font-medium text-gray-700 mb-3">{item.component}</h3>
+          <div 
+            key={index} 
+            className={`bg-white border-l-4 ${getAccentColor(item.component)} rounded-lg shadow-gs-sm hover:shadow-gs-lg transition-shadow duration-gs-base p-6`}
+          >
+            <h3 className="text-lg font-semibold text-gs-gray-900 mb-4">{item.component}</h3>
             
             {/* Trend Indicator */}
-            <div className={`text-2xl font-bold mb-4 ${getTrendColor(item.trend)}`}>
+            <div className={`text-xl font-bold mb-6 font-mono ${getTrendColor(item.trend)}`}>
               {getTrendIcon(item.trend)} {Math.abs(item.percentageChange).toFixed(1)}% {item.trend === 'up' ? 'Higher' : item.trend === 'down' ? 'Lower' : 'Flat'}
             </div>
 
-            {/* This Week and Last Week Columns */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="border-r border-gray-300">
-                <p className="font-semibold text-gray-600 mb-3">This Week</p>
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-xs text-gray-500">Avg</p>
-                    <p className="font-bold text-gray-900">{item.thisWeekAvg.toFixed(1)} GW</p>
+            {/* Compact progression layout */}
+            <div className="space-y-3">
+              {/* Weekly Average */}
+              <div className="bg-gs-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gs-gray-600 uppercase tracking-wide mb-2 font-medium">
+                  Weekly Average
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <div className="text-2xl font-bold text-gs-gray-900 font-mono">
+                    {item.lastWeekAvg.toFixed(1)}
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Max</p>
-                    <p className="font-medium text-gray-700">{item.thisWeekMax.toFixed(1)} GW</p>
+                  <div className="text-xs text-gs-gray-500">GW</div>
+                  <div className="text-gs-gray-400 text-lg">→</div>
+                  <div className="text-2xl font-bold text-gs-gray-900 font-mono">
+                    {item.thisWeekAvg.toFixed(1)}
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Min</p>
-                    <p className="font-medium text-gray-700">{item.thisWeekMin.toFixed(1)} GW</p>
+                  <div className="text-xs text-gs-gray-500">GW</div>
+                  <div className={`text-xs font-medium font-mono ml-auto ${
+                    item.thisWeekAvg - item.lastWeekAvg >= 0 ? 'text-gs-green-600' : 'text-gs-red-600'
+                  }`}>
+                    {item.thisWeekAvg - item.lastWeekAvg >= 0 ? '+' : ''}{(item.thisWeekAvg - item.lastWeekAvg).toFixed(1)} GW
                   </div>
                 </div>
               </div>
 
-              <div>
-                <p className="font-semibold text-gray-600 mb-3">Last Week</p>
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-xs text-gray-500">Avg</p>
-                    <p className="font-bold text-gray-900">{item.lastWeekAvg.toFixed(1)} GW</p>
+              {/* Weekly Maximum */}
+              <div className="bg-gs-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gs-gray-600 uppercase tracking-wide mb-2 font-medium">
+                  Weekly Maximum
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <div className="text-2xl font-bold text-gs-gray-900 font-mono">
+                    {item.lastWeekMax.toFixed(1)}
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Max</p>
-                    <p className="font-medium text-gray-700">{item.lastWeekMax.toFixed(1)} GW</p>
+                  <div className="text-xs text-gs-gray-500">GW</div>
+                  <div className="text-gs-gray-400 text-lg">→</div>
+                  <div className="text-2xl font-bold text-gs-gray-900 font-mono">
+                    {item.thisWeekMax.toFixed(1)}
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Min</p>
-                    <p className="font-medium text-gray-700">{item.lastWeekMin.toFixed(1)} GW</p>
+                  <div className="text-xs text-gs-gray-500">GW</div>
+                  <div className={`text-xs font-medium font-mono ml-auto ${
+                    item.thisWeekMax - item.lastWeekMax >= 0 ? 'text-gs-green-600' : 'text-gs-red-600'
+                  }`}>
+                    {item.thisWeekMax - item.lastWeekMax >= 0 ? '+' : ''}{(item.thisWeekMax - item.lastWeekMax).toFixed(1)} GW
+                  </div>
+                </div>
+              </div>
+
+              {/* Weekly Minimum */}
+              <div className="bg-gs-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gs-gray-600 uppercase tracking-wide mb-2 font-medium">
+                  Weekly Minimum
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <div className="text-2xl font-bold text-gs-gray-900 font-mono">
+                    {item.lastWeekMin.toFixed(1)}
+                  </div>
+                  <div className="text-xs text-gs-gray-500">GW</div>
+                  <div className="text-gs-gray-400 text-lg">→</div>
+                  <div className="text-2xl font-bold text-gs-gray-900 font-mono">
+                    {item.thisWeekMin.toFixed(1)}
+                  </div>
+                  <div className="text-xs text-gs-gray-500">GW</div>
+                  <div className={`text-xs font-medium font-mono ml-auto ${
+                    item.thisWeekMin - item.lastWeekMin >= 0 ? 'text-gs-green-600' : 'text-gs-red-600'
+                  }`}>
+                    {item.thisWeekMin - item.lastWeekMin >= 0 ? '+' : ''}{(item.thisWeekMin - item.lastWeekMin).toFixed(1)} GW
                   </div>
                 </div>
               </div>
