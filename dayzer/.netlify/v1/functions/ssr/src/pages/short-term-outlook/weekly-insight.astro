@@ -1,12 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { SectionHeader } from '../../components/ui/SectionHeader';
-import CombinedLoadChart from '../../components/common/CombinedLoadChart.tsx';
-import CombinedRenewablesChart from '../../components/common/CombinedRenewablesChart.tsx';
-import CombinedLMPChart from '../../components/common/CombinedLMPChart.tsx';
-import CombinedWeatherChart from '../../components/common/CombinedWeatherChart.tsx';
-import RenewableForecastAccuracy from '../../components/common/RenewableForecastAccuracy.tsx';
-import ScenarioDatePicker from '../../components/common/ScenarioDatePicker.tsx';
+import WeeklyInsightPage from '../../components/WeeklyInsightPage.tsx';
 
 // Define sub-navigation for Short Term Outlook
 const subNavLinks: Array<{ label: string; href?: string; dropdown?: Array<{ label: string; href: string; description?: string }> }> = [
@@ -23,71 +17,5 @@ const subNavLinks: Array<{ label: string; href?: string; dropdown?: Array<{ labe
 ---
 
 <Layout title="Weekly Insight" pageTitle="Short Term Outlook" subNavLinks={subNavLinks}>
-  <div class="py-12 space-y-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Page Title -->
-      <SectionHeader 
-        title="Market Operations Outlook"
-        description="Weekly forecast analysis and historical comparisons"
-        client:load
-      />
-      
-      <!-- Scenario Date Picker -->
-      <ScenarioDatePicker client:load />
-      
-      <div class="space-y-8">
-
-        <!-- Pricing Section Header -->
-        <div class="flex items-center mb-6">
-          <div class="w-1 h-8 bg-gs-green-600 rounded-r mr-4"></div>
-          <h2 class="text-3xl font-semibold text-gs-gray-900">Pricing</h2>
-        </div>
-
-        <!-- LMP Forecast Section -->
-        <div class="bg-white border-l-4 border-gs-green-500 rounded-lg shadow-gs-sm p-8">
-          <!-- Combined LMP Forecast and Last Week -->
-          <div class="space-y-6">
-            <CombinedLMPChart client:load />
-          </div>
-        </div>
-        
-        <!-- Fundamentals Section Header -->
-        <div class="flex items-center mb-6">
-          <div class="w-1 h-8 bg-gs-blue-600 rounded-r mr-4"></div>
-          <h2 class="text-3xl font-semibold text-gs-gray-900">Fundamentals</h2>
-        </div>
-        
-        <!-- Load Forecast Section -->
-        <div class="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-8">
-          <!-- Combined Load Forecast and Last Week -->
-          <div class="space-y-6">
-            <CombinedLoadChart client:load />
-          </div>
-        </div>
-
-        <!-- Renewables Forecast Section -->
-        <div class="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-8">
-          <!-- Combined Renewables Forecast and Last Week -->
-          <div class="space-y-6">
-            <CombinedRenewablesChart client:load />
-          </div>
-        </div>
-        
-        <!-- Weather Section Header -->
-        <div class="flex items-center mb-6">
-          <div class="w-1 h-8 bg-gs-amber-500 rounded-r mr-4"></div>
-          <h2 class="text-3xl font-semibold text-gs-gray-900">Weather</h2>
-        </div>
-        
-        <!-- Weather Section Content -->
-        <div class="bg-white border-l-4 border-gs-amber-500 rounded-lg shadow-gs-sm p-8">
-          <!-- Combined Weather Forecast and Last Week -->
-          <div class="space-y-6">
-            <CombinedWeatherChart client:load />
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
+  <WeeklyInsightPage client:load />
 </Layout>

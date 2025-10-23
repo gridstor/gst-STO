@@ -1,213 +1,95 @@
-import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 
 interface CombinedLMPDataPoint {
   datetime: string;
-  // Last Week data (left side)
+  // Last Week data
   energyLastWeek?: number;
   congestionLastWeek?: number;
   lossesLastWeek?: number;
   lmpLastWeek?: number;
-  energyT1LastWeek?: number; // New t-1 energy data
-  congestionT1LastWeek?: number; // New t-1 congestion data
-  lossesT1LastWeek?: number; // New t-1 losses data
-  lmpT1LastWeek?: number; // New t-1 total LMP data
-  // DA LMP components (last week only - from yes_fundamentals)
+  energyT1LastWeek?: number;
+  congestionT1LastWeek?: number;
+  lossesT1LastWeek?: number;
+  lmpT1LastWeek?: number;
+  // DA LMP components (last week only)
   daLMPLastWeek?: number;
   daCongestionLastWeek?: number;
   daEnergyLastWeek?: number;
   daLossLastWeek?: number;
   rtLMPLastWeek?: number;
-  // Forecast data (right side)
+  // Forecast data
   energyForecast?: number;
   congestionForecast?: number;
   lossesForecast?: number;
   lmpForecast?: number;
-  isLastWeek: boolean; // Flag to determine background shading
+  isLastWeek: boolean;
 }
 
-interface CombinedLMPResponse {
-  success: boolean;
-  data: CombinedLMPDataPoint[];
-  metadata: {
-    lastWeekScenario: {
-      scenarioid: number;
-      scenarioname: string;
-    };
-    forecastScenario: {
-      scenarioid: number;
-      scenarioname: string;
-    };
-    lastWeekDateRange: {
-      start: string;
-      end: string;
-    };
-    forecastDateRange: {
-      start: string;
-      end: string;
-    };
-    dataPoints: {
-      lastWeek: number;
-      forecast: number;
-      combined: number;
-    };
-  };
-}
-
-export default function CombinedLMPChart() {
+const CombinedLMPChart = memo(function CombinedLMPChart() {
   const [data, setData] = useState<CombinedLMPDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<CombinedLMPResponse['metadata'] | null>(null);
-  const [copying, setCopying] = useState(false);
-  const [copyingLegend, setCopyingLegend] = useState(false);
-  const [yAxisMax, setYAxisMax] = useState<number>(100);
-  const [yAxisMin, setYAxisMin] = useState<number>(-20);
-  const [viewMode, setViewMode] = useState<'full' | 'lastWeek' | 'forecast'>('full');
-  const [showCustomization, setShowCustomization] = useState<boolean>(false);
+  const [Plot, setPlot] = useState<any>(null);
+  const [showCustomization, setShowCustomization] = useState(false);
+  const [plotRevision, setPlotRevision] = useState(0);
   
   // Store current scenario IDs in component state
   const [currentWeekScenarioId, setCurrentWeekScenarioId] = useState<string | null>(null);
   const [lastWeekScenarioId, setLastWeekScenarioId] = useState<string | null>(null);
-  
-  // Color palette (16 colors)
+
+  // Trigger plot resize when customization panel toggles
+  useEffect(() => {
+    // Small delay to allow grid layout to adjust before triggering Plotly resize
+    const timer = setTimeout(() => {
+      setPlotRevision(prev => prev + 1);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [showCustomization]);
+
+  // Color palette
   const colorOptions = [
-    '#3b82f6', // Blue
-    '#ef4444', // Red  
-    '#22c55e', // Green
-    '#f59e0b', // Amber
-    '#8b5cf6', // Violet
-    '#ec4899', // Pink
-    '#06b6d4', // Cyan
-    '#84cc16', // Lime
-    '#f97316', // Orange
-    '#6366f1', // Indigo
-    '#14b8a6', // Teal
-    '#f43f5e', // Rose
-    '#a855f7', // Purple
-    '#eab308', // Yellow
-    '#6b7280', // Gray
-    '#1f2937', // Dark Gray
+    '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899',
+    '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#14b8a6', '#f43f5e',
+    '#a855f7', '#eab308', '#6b7280', '#1f2937'
   ];
 
-  // Line style options
+  // Line style options for Plotly
   const styleOptions = [
-    { value: 'solid', label: 'Solid', dashArray: '' },
-    { value: 'dashed', label: 'Dashed', dashArray: '5 5' },
-    { value: 'dotted', label: 'Dotted', dashArray: '2 2' },
+    { value: 'solid', label: 'Solid' },
+    { value: 'dash', label: 'Dashed' },
+    { value: 'dot', label: 'Dotted' },
+    { value: 'dashdot', label: 'Dash-Dot' },
   ];
 
-  const [visibleLines, setVisibleLines] = useState({
-    energy: true,
-    congestion: true,
-    losses: true,
-    lmp: true,
-    energyT1: false, // New t-1 energy line
-    congestionT1: false, // New t-1 congestion line
-    lossesT1: false, // New t-1 losses line
-    lmpT1: false, // New t-1 total LMP line
-    // DA LMP components
-    daLMP: false,
-    daCongestion: false, 
-    daEnergy: false,
-    daLoss: false,
-    rtLMP: true,
-  });
-
+  // Line customization state
   const [lineCustomization, setLineCustomization] = useState({
-    energy: { color: '#3b82f6', style: 'solid' }, // Blue
-    congestion: { color: '#ef4444', style: 'solid' }, // Red
-    losses: { color: '#22c55e', style: 'solid' }, // Green
-    lmp: { color: '#f59e0b', style: 'solid' }, // Amber
-    energyT1: { color: '#1d4ed8', style: 'solid' }, // Dark Blue
-    congestionT1: { color: '#b91c1c', style: 'solid' }, // Dark Red
-    lossesT1: { color: '#15803d', style: 'solid' }, // Dark Green
-    lmpT1: { color: '#d97706', style: 'solid' }, // Dark Amber
-    // DA LMP components
-    daLMP: { color: '#8b5cf6', style: 'dashed' }, // Violet, dashed
-    daCongestion: { color: '#ec4899', style: 'dashed' }, // Pink, dashed
-    daEnergy: { color: '#06b6d4', style: 'dashed' }, // Cyan, dashed
-    daLoss: { color: '#84cc16', style: 'dashed' }, // Lime, dashed
-    rtLMP: { color: '#6b7280', style: 'solid' }, // Gray
+    dayzerEnergy: { color: '#3B82F6', style: 'solid', visible: true },
+    dayzerCongestion: { color: '#EF4444', style: 'solid', visible: true },
+    dayzerLoss: { color: '#22C55E', style: 'solid', visible: true },
+    dayzerLMP: { color: '#F59E0B', style: 'solid', visible: true },
+    dayzerEnergyT1: { color: '#1D4ED8', style: 'dot', visible: false },
+    dayzerCongestionT1: { color: '#B91C1C', style: 'dot', visible: false },
+    dayzerLossT1: { color: '#15803D', style: 'dot', visible: false },
+    dayzerLMPT1: { color: '#D97706', style: 'dot', visible: false },
+    daEnergy: { color: '#06B6D4', style: 'dash', visible: false },
+    daCongestion: { color: '#EC4899', style: 'dash', visible: false },
+    daLoss: { color: '#84CC16', style: 'dash', visible: false },
+    daLMP: { color: '#8B5CF6', style: 'dash', visible: false },
+    rtLMP: { color: '#6B7280', style: 'solid', visible: true },
   });
 
-  // Toggle line visibility and auto-scale Y-axis
-  const toggleLine = (lineKey: keyof typeof visibleLines) => {
-    const newVisibleLines = {
-      ...visibleLines,
-      [lineKey]: !visibleLines[lineKey]
-    };
-    
-    setVisibleLines(newVisibleLines);
-    
-    // Auto-scale Y-axis based on currently visible lines
-    if (data.length > 0) {
-      const visibleValues: number[] = [];
-      
-      // Collect values from all visible LMP lines
-      data.forEach(point => {
-        if (newVisibleLines.energy) {
-          if (point.energyLastWeek) visibleValues.push(point.energyLastWeek);
-          if (point.energyForecast) visibleValues.push(point.energyForecast);
-        }
-        if (newVisibleLines.congestion) {
-          if (point.congestionLastWeek) visibleValues.push(point.congestionLastWeek);
-          if (point.congestionForecast) visibleValues.push(point.congestionForecast);
-        }
-        if (newVisibleLines.losses) {
-          if (point.lossesLastWeek) visibleValues.push(point.lossesLastWeek);
-          if (point.lossesForecast) visibleValues.push(point.lossesForecast);
-        }
-        if (newVisibleLines.lmp) {
-          if (point.lmpLastWeek) visibleValues.push(point.lmpLastWeek);
-          if (point.lmpForecast) visibleValues.push(point.lmpForecast);
-        }
-        if (newVisibleLines.energyT1) {
-          if (point.energyT1LastWeek) visibleValues.push(point.energyT1LastWeek);
-        }
-        if (newVisibleLines.congestionT1) {
-          if (point.congestionT1LastWeek) visibleValues.push(point.congestionT1LastWeek);
-        }
-        if (newVisibleLines.lossesT1) {
-          if (point.lossesT1LastWeek) visibleValues.push(point.lossesT1LastWeek);
-        }
-        if (newVisibleLines.lmpT1) {
-          if (point.lmpT1LastWeek) visibleValues.push(point.lmpT1LastWeek);
-        }
-        if (newVisibleLines.daLMP) {
-          if (point.daLMPLastWeek) visibleValues.push(point.daLMPLastWeek);
-        }
-        if (newVisibleLines.daCongestion) {
-          if (point.daCongestionLastWeek) visibleValues.push(point.daCongestionLastWeek);
-        }
-        if (newVisibleLines.daEnergy) {
-          if (point.daEnergyLastWeek) visibleValues.push(point.daEnergyLastWeek);
-        }
-        if (newVisibleLines.daLoss) {
-          if (point.daLossLastWeek) visibleValues.push(point.daLossLastWeek);
-        }
-        if (newVisibleLines.rtLMP) {
-          if (point.rtLMPLastWeek) visibleValues.push(point.rtLMPLastWeek);
-        }
-      });
-
-      // Auto-scale Y-axis if we have visible data
-      if (visibleValues.length > 0) {
-        const min = Math.min(...visibleValues);
-        const max = Math.max(...visibleValues);
-        const padding = (max - min) * 0.1; // 10% padding
-        setYAxisMin(Math.floor(min - padding));
-        setYAxisMax(Math.ceil(max + padding));
-      }
-    }
-  };
+  // Load Plotly only on client side
+  useEffect(() => {
+    import('react-plotly.js').then((module) => {
+      setPlot(() => module.default);
+    });
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Use scenario IDs from component state
       console.log('Fetching LMP with scenarios:', { currentWeekScenario: currentWeekScenarioId, lastWeekScenario: lastWeekScenarioId });
 
       // Build API URLs with scenario parameters from state
@@ -219,9 +101,6 @@ export default function CombinedLMPChart() {
         ? `/api/lmp-last-week-forecast?scenarioId=${lastWeekScenarioId}`
         : '/api/lmp-last-week-forecast';
 
-      console.log('LMP API URLs:', { forecastUrl, lastWeekUrl });
-      console.log('Fetching LMP forecast and last week data separately...');
-      
       // Fetch both APIs in parallel
       const [forecastResponse, lastWeekResponse] = await Promise.all([
         fetch(forecastUrl),
@@ -240,9 +119,6 @@ export default function CombinedLMPChart() {
 
       const forecastData = await forecastResponse.json();
       const lastWeekData = await lastWeekResponse.json();
-
-      console.log('LMP Forecast data:', forecastData);
-      console.log('LMP Last week data:', lastWeekData);
 
       // Combine the data
       const combinedData: CombinedLMPDataPoint[] = [];
@@ -287,68 +163,7 @@ export default function CombinedLMPChart() {
       // Sort by datetime
       combinedData.sort((a, b) => a.datetime.localeCompare(b.datetime));
 
-      console.log('Combined LMP data points:', combinedData.length);
-      if (combinedData.length > 0) {
-        console.log('Sample combined LMP data point:', combinedData[0]);
-        console.log('Data keys in first point:', Object.keys(combinedData[0]));
-      }
       setData(combinedData);
-      
-      // Auto-scale Y-axis based on initial data
-      if (combinedData.length > 0) {
-        const allValues: number[] = [];
-        
-        // Collect all visible line values
-        combinedData.forEach(point => {
-          if (visibleLines.energy) {
-            if (point.energyLastWeek) allValues.push(point.energyLastWeek);
-            if (point.energyForecast) allValues.push(point.energyForecast);
-          }
-          if (visibleLines.congestion) {
-            if (point.congestionLastWeek) allValues.push(point.congestionLastWeek);
-            if (point.congestionForecast) allValues.push(point.congestionForecast);
-          }
-          if (visibleLines.losses) {
-            if (point.lossesLastWeek) allValues.push(point.lossesLastWeek);
-            if (point.lossesForecast) allValues.push(point.lossesForecast);
-          }
-          if (visibleLines.lmp) {
-            if (point.lmpLastWeek) allValues.push(point.lmpLastWeek);
-            if (point.lmpForecast) allValues.push(point.lmpForecast);
-          }
-          if (visibleLines.energyT1 && point.energyT1LastWeek) allValues.push(point.energyT1LastWeek);
-          if (visibleLines.congestionT1 && point.congestionT1LastWeek) allValues.push(point.congestionT1LastWeek);
-          if (visibleLines.lossesT1 && point.lossesT1LastWeek) allValues.push(point.lossesT1LastWeek);
-          if (visibleLines.lmpT1 && point.lmpT1LastWeek) allValues.push(point.lmpT1LastWeek);
-          if (visibleLines.daLMP && point.daLMPLastWeek) allValues.push(point.daLMPLastWeek);
-          if (visibleLines.daCongestion && point.daCongestionLastWeek) allValues.push(point.daCongestionLastWeek);
-          if (visibleLines.daEnergy && point.daEnergyLastWeek) allValues.push(point.daEnergyLastWeek);
-          if (visibleLines.daLoss && point.daLossLastWeek) allValues.push(point.daLossLastWeek);
-          if (visibleLines.rtLMP && point.rtLMPLastWeek) allValues.push(point.rtLMPLastWeek);
-        });
-
-        if (allValues.length > 0) {
-          const min = Math.min(...allValues);
-          const max = Math.max(...allValues);
-          const padding = (max - min) * 0.1; // 10% padding
-          setYAxisMin(Math.floor(min - padding));
-          setYAxisMax(Math.ceil(max + padding));
-          console.log('LMP chart auto-scaled Y-axis:', { min, max, yAxisMin: Math.floor(min - padding), yAxisMax: Math.ceil(max + padding) });
-        }
-      }
-      
-      // Create combined metadata
-      setMetadata({
-        lastWeekScenario: lastWeekData.metadata?.scenario || { scenarioid: 0, scenarioname: 'Unknown' },
-        forecastScenario: forecastData.metadata?.scenario || { scenarioid: 0, scenarioname: 'Unknown' },
-        lastWeekDateRange: lastWeekData.metadata?.dateRange || { start: '', end: '' },
-        forecastDateRange: forecastData.metadata?.dateRange || { start: '', end: '' },
-        dataPoints: {
-          lastWeek: lastWeekData.data?.length || 0,
-          forecast: forecastData.data?.length || 0,
-          combined: combinedData.length,
-        }
-      });
 
     } catch (err) {
       console.error('Combined LMP data error:', err);
@@ -362,23 +177,16 @@ export default function CombinedLMPChart() {
   useEffect(() => {
     const handleScenarioChange = (event: CustomEvent) => {
       console.log('LMP chart received scenario change:', event.detail);
-      // Store scenario IDs in state from event
       if (event.detail.currentWeekScenario) {
         setCurrentWeekScenarioId(event.detail.currentWeekScenario.toString());
       }
       if (event.detail.lastWeekScenario) {
         setLastWeekScenarioId(event.detail.lastWeekScenario.toString());
       }
-      // Refetch will happen automatically when state changes
     };
 
     window.addEventListener('scenarioChanged', handleScenarioChange as EventListener);
     return () => window.removeEventListener('scenarioChanged', handleScenarioChange as EventListener);
-  }, []);
-
-  // Initial data fetch
-  useEffect(() => {
-    fetchData();
   }, []);
   
   // Refetch when scenario IDs change
@@ -388,746 +196,583 @@ export default function CombinedLMPChart() {
     }
   }, [currentWeekScenarioId, lastWeekScenarioId]);
 
-  // Copy chart as image function
-  const copyChartAsImage = async () => {
-    if (copying) return;
-    setCopying(true);
-
-    try {
-      const chartContainer = document.querySelector('.combined-lmp-chart-container');
-      if (!chartContainer) {
-        throw new Error('Chart container not found');
-      }
-
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(chartContainer as HTMLElement, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-      });
-
-      canvas.toBlob(async (blob) => {
-        if (blob && navigator.clipboard && window.ClipboardItem) {
-          try {
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ]);
-            console.log('LMP chart copied to clipboard');
-          } catch (err) {
-            console.error('Failed to copy LMP chart to clipboard:', err);
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error copying LMP chart:', error);
-    } finally {
-      setCopying(false);
-    }
-  };
-
-  // Copy legend as image function  
-  const copyLegendAsImage = async () => {
-    if (copyingLegend) return;
-    setCopyingLegend(true);
-
-    try {
-      const toggleContainer = document.querySelector('.lmp-toggle-lines-section');
-      if (!toggleContainer) {
-        throw new Error('Toggle lines container not found');
-      }
-
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(toggleContainer as HTMLElement, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-      });
-
-      canvas.toBlob(async (blob) => {
-        if (blob && navigator.clipboard && window.ClipboardItem) {
-          try {
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ]);
-            console.log('LMP legend copied to clipboard');
-          } catch (err) {
-            console.error('Failed to copy LMP legend to clipboard:', err);
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error copying LMP legend:', error);
-    } finally {
-      setCopyingLegend(false);
-    }
-  };
-
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length > 0) {
-      const datetime = new Date(label);
-      const formattedDate = datetime.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      });
-      const formattedTime = datetime.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      });
-
-      return (
-        <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
-          <p className="font-medium text-gray-800 mb-2">
-            {formattedDate} at {formattedTime}
-          </p>
-          {payload
-            .filter((entry: any) => entry.value !== null && entry.value !== undefined && entry.name !== "Zero Line")
-            .map((entry: any, index: number) => (
-              <p key={index} style={{ color: entry.color }} className="text-sm">
-                {entry.name}: ${entry.value.toFixed(2)}/MWh
-              </p>
-            ))}
-        </div>
-      );
+  // Get boundary dates for grey shading
+  const lastWeekEndDate = useMemo(() => {
+    const lastWeekPoints = data.filter(d => d.isLastWeek);
+    if (lastWeekPoints.length > 0) {
+      return lastWeekPoints[lastWeekPoints.length - 1].datetime;
     }
     return null;
-  };
+  }, [data]);
 
-  // Find the boundary between last week and forecast data
-  const lastWeekEndIndex = data.findIndex(d => !d.isLastWeek);
-  const lastWeekEndDate = lastWeekEndIndex > 0 ? data[lastWeekEndIndex - 1]?.datetime : null;
-  const forecastStartDate = lastWeekEndIndex >= 0 ? data[lastWeekEndIndex]?.datetime : null;
+  const firstDate = useMemo(() => {
+    if (data.length > 0) {
+      return data[0].datetime;
+    }
+    return null;
+  }, [data]);
 
-  // Filter data based on view mode
-  const filteredData = data.filter(d => {
-    if (viewMode === 'full') return true;
-    if (viewMode === 'lastWeek') return d.isLastWeek;
-    if (viewMode === 'forecast') return !d.isLastWeek;
-    return true;
-  });
+  // Pre-process data for better performance
+  const processedData = useMemo(() => {
+    const lastWeekData = data.filter(d => d.isLastWeek);
+    const allX = data.map(d => d.datetime);
+    const lastWeekX = lastWeekData.map(d => d.datetime);
+    
+    return {
+      allX,
+      lastWeekX,
+      lastWeekData,
+      // Pre-compute combined arrays
+      energyY: data.map(d => d.isLastWeek ? d.energyLastWeek : d.energyForecast),
+      congestionY: data.map(d => d.isLastWeek ? d.congestionLastWeek : d.congestionForecast),
+      lossY: data.map(d => d.isLastWeek ? d.lossesLastWeek : d.lossesForecast),
+      lmpY: data.map(d => d.isLastWeek ? d.lmpLastWeek : d.lmpForecast),
+    };
+  }, [data]);
 
-  // Determine if we should show the grey background
-  const showGreyBackground = viewMode === 'full' || viewMode === 'lastWeek';
+  // Create Plotly traces - combine last week and forecast into continuous lines
+  const traces: any[] = useMemo(() => {
+    if (!data || data.length === 0) return [];
+
+    const traces: any[] = [];
+    const { allX, lastWeekX, lastWeekData, energyY, congestionY, lossY, lmpY } = processedData;
+
+    // Dayzer Energy - Combined continuous line
+    if (lineCustomization.dayzerEnergy.visible) {
+      traces.push({
+        x: allX,
+        y: energyY,
+        name: 'Dayzer Energy',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.dayzerEnergy.color,
+          width: 2,
+          dash: lineCustomization.dayzerEnergy.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // Dayzer Congestion - Combined continuous line
+    if (lineCustomization.dayzerCongestion.visible) {
+      traces.push({
+        x: allX,
+        y: congestionY,
+        name: 'Dayzer Congestion',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.dayzerCongestion.color,
+          width: 2,
+          dash: lineCustomization.dayzerCongestion.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // Dayzer Loss - Combined continuous line
+    if (lineCustomization.dayzerLoss.visible) {
+      traces.push({
+        x: allX,
+        y: lossY,
+        name: 'Dayzer Loss',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.dayzerLoss.color,
+          width: 2,
+          dash: lineCustomization.dayzerLoss.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // Dayzer LMP - Combined continuous line
+    if (lineCustomization.dayzerLMP.visible) {
+      traces.push({
+        x: allX,
+        y: lmpY,
+        name: 'Dayzer LMP',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.dayzerLMP.color,
+          width: 2,
+          dash: lineCustomization.dayzerLMP.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // Dayzer Energy t-1 (Last Week only)
+    if (lineCustomization.dayzerEnergyT1.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.energyT1LastWeek),
+        name: 'Dayzer Energy t-1',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.dayzerEnergyT1.color,
+          width: 2,
+          dash: lineCustomization.dayzerEnergyT1.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // Dayzer Congestion t-1 (Last Week only)
+    if (lineCustomization.dayzerCongestionT1.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.congestionT1LastWeek),
+        name: 'Dayzer Congestion t-1',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.dayzerCongestionT1.color,
+          width: 2,
+          dash: lineCustomization.dayzerCongestionT1.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // Dayzer Loss t-1 (Last Week only)
+    if (lineCustomization.dayzerLossT1.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.lossesT1LastWeek),
+        name: 'Dayzer Loss t-1',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.dayzerLossT1.color,
+          width: 2,
+          dash: lineCustomization.dayzerLossT1.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // Dayzer LMP t-1 (Last Week only)
+    if (lineCustomization.dayzerLMPT1.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.lmpT1LastWeek),
+        name: 'Dayzer LMP t-1',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.dayzerLMPT1.color,
+          width: 2,
+          dash: lineCustomization.dayzerLMPT1.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // DA Energy (Last Week only)
+    if (lineCustomization.daEnergy.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.daEnergyLastWeek),
+        name: 'DA Energy',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.daEnergy.color,
+          width: 2,
+          dash: lineCustomization.daEnergy.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // DA Congestion (Last Week only)
+    if (lineCustomization.daCongestion.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.daCongestionLastWeek),
+        name: 'DA Congestion',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.daCongestion.color,
+          width: 2,
+          dash: lineCustomization.daCongestion.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // DA Loss (Last Week only)
+    if (lineCustomization.daLoss.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.daLossLastWeek),
+        name: 'DA Loss',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.daLoss.color,
+          width: 2,
+          dash: lineCustomization.daLoss.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // DA LMP (Last Week only)
+    if (lineCustomization.daLMP.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.daLMPLastWeek),
+        name: 'DA LMP',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.daLMP.color,
+          width: 2,
+          dash: lineCustomization.daLMP.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    // RT LMP (Last Week only)
+    if (lineCustomization.rtLMP.visible) {
+      traces.push({
+        x: lastWeekX,
+        y: lastWeekData.map(d => d.rtLMPLastWeek),
+        name: 'RT LMP',
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+          color: lineCustomization.rtLMP.color,
+          width: 2,
+          dash: lineCustomization.rtLMP.style
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      });
+    }
+
+    return traces;
+  }, [processedData, lineCustomization]);
+
+  // Plotly layout configuration - memoized separately from traces to prevent unnecessary re-renders
+  const layout: any = useMemo(() => {
+    const layoutConfig: any = {
+      height: 600,
+      margin: { l: 80, r: 40, t: 40, b: 140 },
+      title: {
+        text: '',
+        font: {
+          size: 18,
+          family: 'Inter, sans-serif',
+          color: '#111827'
+        }
+      },
+      xaxis: {
+        title: { text: '' },
+        tickformat: '%b %d',
+        tickangle: 0,
+        showgrid: true,
+        gridcolor: '#E5E7EB',
+        zeroline: false,
+        showline: true,
+        linecolor: '#6B7280',
+        linewidth: 1,
+        ticks: 'outside',
+        ticklen: 5,
+        tickwidth: 1,
+        tickcolor: '#6B7280',
+        tickfont: {
+          size: 11,
+          family: 'Inter, sans-serif',
+          color: '#6B7280'
+        },
+        showspikes: true,
+        spikemode: 'across',
+        spikethickness: 1,
+        spikecolor: '#9CA3AF',
+        spikedash: 'solid',
+        hoverformat: '%b %d, %Y at %I:%M %p',
+        dtick: 86400000,
+        tick0: data.length > 0 ? data[0].datetime : undefined
+      },
+      yaxis: {
+        title: {
+          text: '$/MWh',
+          font: {
+            size: 14,
+            color: '#4B5563',
+            family: 'Inter, sans-serif'
+          }
+        },
+        showgrid: true,
+        gridcolor: '#E5E7EB',
+        zeroline: true,
+        zerolinecolor: '#9CA3AF',
+        zerolinewidth: 1,
+        showline: true,
+        linecolor: '#6B7280',
+        linewidth: 1,
+        ticks: 'outside',
+        ticklen: 5,
+        tickwidth: 1,
+        tickcolor: '#6B7280',
+        tickfont: {
+          size: 13,
+          family: 'Inter, sans-serif',
+          color: '#6B7280'
+        }
+      },
+      hovermode: 'x unified',
+      hoverlabel: {
+        bgcolor: 'white',
+        bordercolor: '#E5E7EB',
+        font: {
+          family: 'Inter, sans-serif',
+          size: 13
+        },
+        namelength: -1
+      },
+      legend: {
+        orientation: 'h',
+        yanchor: 'top',
+        y: -0.25,
+        xanchor: 'center',
+        x: 0.5,
+        font: {
+          size: 14,
+          family: 'Inter, sans-serif'
+        }
+      },
+      plot_bgcolor: 'white',
+      paper_bgcolor: 'white',
+      font: {
+        family: 'Inter, sans-serif',
+        size: 13,
+        color: '#6B7280'
+      }
+    };
+
+    // Add grey background shape for last week if we have the dates
+    if (firstDate && lastWeekEndDate) {
+      layoutConfig.shapes = [{
+        type: 'rect',
+        xref: 'x',
+        yref: 'paper',
+        x0: firstDate,
+        x1: lastWeekEndDate,
+        y0: 0,
+        y1: 1,
+        fillcolor: '#E5E7EB',
+        opacity: 0.3,
+        layer: 'below',
+        line: {
+          width: 0
+        }
+      }];
+    }
+
+    return layoutConfig;
+  }, [data, firstDate, lastWeekEndDate]);
+
+  // Plotly config with performance optimizations
+  const config: any = useMemo(() => ({
+    responsive: true,
+    displayModeBar: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
+    toImageButtonOptions: {
+      format: 'png',
+      filename: 'lmp_forecast',
+      height: 600,
+      width: 1200,
+      scale: 2
+    }
+  }), []);
 
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 h-96 flex items-center justify-center">
-        <div className="text-gray-500">Loading combined LMP data...</div>
+      <div className="bg-white p-6 rounded-lg shadow-gs-sm border border-gs-gray-200 h-96 flex items-center justify-center">
+        <div className="text-gs-gray-500">Loading LMP data...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 h-96 flex items-center justify-center">
-        <div className="text-red-500">Error loading combined LMP data: {error}</div>
+      <div className="bg-white p-6 rounded-lg shadow-gs-sm border border-gs-gray-200 h-96 flex items-center justify-center">
+        <div className="text-gs-red-500">Error: {error}</div>
       </div>
     );
   }
 
-  return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-200">
-      {/* Action Buttons */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          {/* Left spacer for future buttons */}
-          <div></div>
-
-          {/* Copy Buttons (Right) */}
-          <div className="flex items-center gap-4">
-            {/* Copy Chart Button */}
-            <button
-              onClick={copyChartAsImage}
-              disabled={copying}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              {copying ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Copying...
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h8a2 2 0 002 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Copy Chart
-                </>
-              )}
-            </button>
-
-            {/* Copy Legend Button */}
-            <button
-              onClick={copyLegendAsImage}
-              disabled={copyingLegend}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              {copyingLegend ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Copying...
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Copy Legend
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+  if (!Plot) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-gs-sm border border-gs-gray-200 h-96 flex items-center justify-center">
+        <div className="text-gs-gray-500">Loading chart...</div>
       </div>
+    );
+  }
 
-      {/* Y-Axis Range Controls and View Toggle */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-        <div className="grid grid-cols-3 gap-6">
-          {/* View Mode Toggle */}
-          <div className="flex items-center justify-center gap-2">
-            <label className="text-sm font-medium text-gray-700">View:</label>
-            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-              <button
-                onClick={() => setViewMode('full')}
-                className={`px-3 py-1 text-xs font-medium transition-colors ${
-                  viewMode === 'full'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                Full
-              </button>
-              <button
-                onClick={() => setViewMode('lastWeek')}
-                className={`px-3 py-1 text-xs font-medium transition-colors border-l border-r border-gray-300 ${
-                  viewMode === 'lastWeek'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                Last Week
-              </button>
-              <button
-                onClick={() => setViewMode('forecast')}
-                className={`px-3 py-1 text-xs font-medium transition-colors ${
-                  viewMode === 'forecast'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                Forecast
-              </button>
-            </div>
-          </div>
-        
-          {/* Y-Axis Min Control */}
-          <div className="flex items-center justify-center gap-4">
-            <label className="text-sm font-medium text-gray-700">Y-Axis Min:</label>
-            <input
-              type="range"
-              min="-100"
-              max="50"
-              step="10"
-              value={yAxisMin}
-              onChange={(e) => setYAxisMin(parseInt(e.target.value))}
-              className="w-32"
-            />
-            <span className="text-sm text-gray-600 min-w-[80px]">${yAxisMin}/MWh</span>
-          </div>
-          
-          <div className="flex items-center justify-center gap-4">
-            <label className="text-sm font-medium text-gray-700">Y-Axis Max:</label>
-            <input
-              type="range"
-              min="50"
-              max="300"
-              step="10"
-              value={yAxisMax}
-              onChange={(e) => setYAxisMax(parseInt(e.target.value))}
-              className="w-32"
-            />
-            <span className="text-sm text-gray-600 min-w-[80px]">${yAxisMax}/MWh</span>
-          </div>
-        </div>
-        
-        {/* Line Customization List */}
-        <div className="mt-4 pt-4 border-t border-gray-300">
-          <div className="flex items-center justify-between mb-3">
+  // Toggle line visibility
+  const toggleLine = (lineKey: keyof typeof lineCustomization) => {
+    setLineCustomization(prev => ({
+      ...prev,
+      [lineKey]: { ...prev[lineKey], visible: !prev[lineKey].visible }
+    }));
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Chart and Customization Panel Container */}
+      <div className={`grid gap-4 ${showCustomization ? 'grid-cols-3' : 'grid-cols-1'}`}>
+        {/* Chart Container - Takes 2/3 when customization is shown */}
+        <div className={`bg-white p-6 rounded-lg shadow-gs-sm border-l-4 border-gs-green-500 ${showCustomization ? 'col-span-2' : ''}`} style={{ minHeight: '700px' }}>
+          {/* Title and Customize Button */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold text-gs-gray-900">LMP Forecast</h3>
             <button
               onClick={() => setShowCustomization(!showCustomization)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-gs-blue-500 hover:bg-gs-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
             >
               <svg 
-                className={`w-4 h-4 transition-transform ${showCustomization ? 'rotate-90' : ''}`} 
+                className="w-4 h-4" 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
-              Customize Lines
-            </button>
-            
-            <button
-              onClick={() => setVisibleLines({
-                energy: false,
-                congestion: false,
-                losses: false,
-                lmp: false,
-                energyT1: false,
-                congestionT1: false,
-                lossesT1: false,
-                lmpT1: false,
-                daLMP: false,
-                daCongestion: false,
-                daEnergy: false,
-                daLoss: false,
-                rtLMP: false,
-              })}
-              className="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-800 border border-red-300 hover:border-red-400 rounded-lg transition-colors"
-            >
-              Remove All
+              {showCustomization ? 'Hide' : 'Show'} Customize Lines
             </button>
           </div>
-          
-          {showCustomization && (
-            <div className="lmp-toggle-lines-section grid grid-cols-1 gap-2">
-            {Object.entries(visibleLines).map(([lineKey, isVisible]) => {
-              const customization = lineCustomization[lineKey as keyof typeof lineCustomization];
-              let lineName = lineKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-              
-              // Clean up specific line names
-              if (lineKey === 'energy') lineName = 'Dayzer Energy';
-              if (lineKey === 'congestion') lineName = 'Dayzer Congestion';
-              if (lineKey === 'losses') lineName = 'Dayzer Loss';
-              if (lineKey === 'lmp') lineName = 'Dayzer LMP';
-              if (lineKey === 'energyT1') lineName = 'Dayzer Energy t-1';
-              if (lineKey === 'congestionT1') lineName = 'Dayzer Congestion t-1';
-              if (lineKey === 'lossesT1') lineName = 'Dayzer Loss t-1';
-              if (lineKey === 'lmpT1') lineName = 'Dayzer LMP t-1';
-              if (lineKey === 'daLMP') lineName = 'DA LMP';
-              if (lineKey === 'daCongestion') lineName = 'DA Congestion';
-              if (lineKey === 'daEnergy') lineName = 'DA Energy';
-              if (lineKey === 'daLoss') lineName = 'DA Loss';
-              if (lineKey === 'rtLMP') lineName = 'RT LMP';
-              
-              return (
-                <div 
-                  key={lineKey} 
-                  className="rounded-md p-3 bg-white shadow-sm"
-                  style={{
-                    border: `2px ${customization.style === 'solid' ? 'solid' : 
-                            customization.style === 'dashed' ? 'dashed' : 'dotted'} ${
-                            isVisible ? customization.color : '#d1d5db'
-                          }`,
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    {/* Left: Checkbox and Variable Name */}
-                    <div className="flex items-center gap-2 min-w-[160px]">
-                      <input
-                        type="checkbox"
-                        checked={isVisible}
-                        onChange={() => toggleLine(lineKey as keyof typeof visibleLines)}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm font-bold text-gray-700">{lineName}</span>
-                    </div>
-                    
-                    {/* Right: Style Selector + Colors */}
-                    <div className="flex items-center gap-3 flex-1 justify-end">
-                      <select
-                        value={customization.style}
-                        onChange={(e) => setLineCustomization(prev => ({
-                          ...prev,
-                          [lineKey]: { ...prev[lineKey as keyof typeof prev], style: e.target.value }
-                        }))}
-                        className="text-sm border border-gray-300 rounded px-3 py-1 w-24"
-                      >
-                        {styleOptions.map(option => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      
-                      {/* Color Picker */}
-                      <div className="flex gap-1">
-                        {colorOptions.map(color => (
-                          <button
-                            key={color}
-                            onClick={() => setLineCustomization(prev => ({
-                              ...prev,
-                              [lineKey]: { ...prev[lineKey as keyof typeof prev], color }
-                            }))}
-                            className={`w-4 h-4 rounded border ${
-                              customization.color === color 
-                                ? 'border-gray-800 border-2' 
-                                : 'border-gray-300'
-                            }`}
-                            style={{ backgroundColor: color }}
-                            title={color}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          {Plot && (
+            <div style={{ width: '100%', height: '600px' }}>
+              <Plot
+                key={`lmp-chart-${currentWeekScenarioId}-${lastWeekScenarioId}`}
+                data={traces}
+                layout={layout}
+                config={config}
+                style={{ width: '100%', height: '100%' }}
+                useResizeHandler={true}
+                revision={plotRevision}
+              />
             </div>
           )}
         </div>
-      </div>
 
-      {/* Chart Container */}
-      <div className="combined-lmp-chart-container bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-        <div className="text-center mb-4">
-          <h3 className="text-xl font-semibold text-gray-800">LMP Forecast</h3>
-        </div>
-        
-        <div className="h-[500px] relative">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#e5e7eb"
-                horizontal={true}
-                vertical={true}
-              />
-              
-              {/* Light grey background for Last Week area */}
-              {showGreyBackground && lastWeekEndDate && forecastStartDate && (
-                <ReferenceArea
-                  x1={filteredData[0]?.datetime}
-                  x2={lastWeekEndDate}
-                  fill="#e5e7eb"
-                  fillOpacity={0.5}
-                />
-              )}
-              
-              <XAxis 
-                dataKey="datetime"
-                tickFormatter={(tickItem: string) => {
-                  const date = new Date(tickItem);
-                  const hour = date.getHours();
-                  if (hour === 0) {
-                    return date.toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric'
-                    });
-                  }
-                  return '';
+        {/* Customization Panel - Takes 1/3 on the right when shown */}
+        {showCustomization && (
+          <div className="bg-gs-gray-50 border border-gs-gray-200 rounded-lg p-4 overflow-y-auto" style={{ maxHeight: '700px' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gs-gray-900">Line Settings</h3>
+              <button
+                onClick={() => {
+                  const newCustomization = { ...lineCustomization };
+                  Object.keys(newCustomization).forEach(key => {
+                    newCustomization[key as keyof typeof lineCustomization].visible = false;
+                  });
+                  setLineCustomization(newCustomization);
                 }}
-                stroke="#6b7280"
-                fontSize={12}
-                height={40}
-                interval={23}
-                axisLine={true}
-                tickLine={true}
-              />
-              <YAxis 
-                stroke="#6b7280"
-                fontSize={12}
-                domain={[yAxisMin, yAxisMax]}
-                ticks={(() => {
-                  const roundedMin = Math.floor(yAxisMin / 5) * 5;
-                  const roundedMax = Math.ceil(yAxisMax / 5) * 5;
-                  const ticks = [];
-                  for (let tick = roundedMin; tick <= roundedMax; tick += 5) {
-                    ticks.push(tick);
-                  }
-                  return ticks;
-                })()}
-                label={{ value: '$/MWh', angle: -90, position: 'insideLeft' }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              
-              {/* Zero reference line */}
-              <Line
-                type="monotone"
-                dataKey={() => 0}
-                stroke="#000000"
-                strokeWidth={1}
-                dot={false}
-                connectNulls={true}
-                name="Zero Line"
-              />
-              
-              {/* Energy - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="energyLastWeek"
-                stroke={lineCustomization.energy.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.energy.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Energy"
-                connectNulls={false}
-                hide={!visibleLines.energy}
-              />
-              <Line
-                type="stepAfter"
-                dataKey="energyForecast"
-                stroke={lineCustomization.energy.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.energy.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Energy"
-                connectNulls={false}
-                hide={!visibleLines.energy}
-              />
-
-              {/* Energy t-1 - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="energyT1LastWeek"
-                stroke={lineCustomization.energyT1.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.energyT1.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Energy t-1"
-                connectNulls={false}
-                hide={!visibleLines.energyT1}
-              />
-              
-              {/* Congestion - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="congestionLastWeek"
-                stroke={lineCustomization.congestion.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.congestion.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Congestion"
-                connectNulls={false}
-                hide={!visibleLines.congestion}
-              />
-              <Line
-                type="stepAfter"
-                dataKey="congestionForecast"
-                stroke={lineCustomization.congestion.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.congestion.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Congestion"
-                connectNulls={false}
-                hide={!visibleLines.congestion}
-              />
-
-              {/* Congestion t-1 - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="congestionT1LastWeek"
-                stroke={lineCustomization.congestionT1.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.congestionT1.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Congestion t-1"
-                connectNulls={false}
-                hide={!visibleLines.congestionT1}
-              />
-              
-              {/* Losses - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="lossesLastWeek"
-                stroke={lineCustomization.losses.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.losses.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Loss"
-                connectNulls={false}
-                hide={!visibleLines.losses}
-              />
-              <Line
-                type="stepAfter"
-                dataKey="lossesForecast"
-                stroke={lineCustomization.losses.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.losses.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Loss"
-                connectNulls={false}
-                hide={!visibleLines.losses}
-              />
-
-              {/* Losses t-1 - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="lossesT1LastWeek"
-                stroke={lineCustomization.lossesT1.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.lossesT1.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer Loss t-1"
-                connectNulls={false}
-                hide={!visibleLines.lossesT1}
-              />
-              
-              {/* Total LMP - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="lmpLastWeek"
-                stroke={lineCustomization.lmp.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.lmp.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer LMP"
-                connectNulls={false}
-                hide={!visibleLines.lmp}
-              />
-              <Line
-                type="stepAfter"
-                dataKey="lmpForecast"
-                stroke={lineCustomization.lmp.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.lmp.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer LMP"
-                connectNulls={false}
-                hide={!visibleLines.lmp}
-              />
-
-              {/* Total LMP t-1 - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="lmpT1LastWeek"
-                stroke={lineCustomization.lmpT1.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.lmpT1.style)?.dashArray || ''}
-                dot={false}
-                name="Dayzer LMP t-1"
-                connectNulls={false}
-                hide={!visibleLines.lmpT1}
-              />
-              
-              {/* DA Energy - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="daEnergyLastWeek"
-                stroke={lineCustomization.daEnergy.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.daEnergy.style)?.dashArray || ''}
-                dot={false}
-                name="DA Energy"
-                connectNulls={false}
-                hide={!visibleLines.daEnergy}
-              />
-              
-              {/* DA Congestion - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="daCongestionLastWeek"
-                stroke={lineCustomization.daCongestion.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.daCongestion.style)?.dashArray || ''}
-                dot={false}
-                name="DA Congestion"
-                connectNulls={false}
-                hide={!visibleLines.daCongestion}
-              />
-              
-              {/* DA Loss - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="daLossLastWeek"
-                stroke={lineCustomization.daLoss.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.daLoss.style)?.dashArray || ''}
-                dot={false}
-                name="DA Loss"
-                connectNulls={false}
-                hide={!visibleLines.daLoss}
-              />
-              
-              {/* DA LMP - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="daLMPLastWeek"
-                stroke={lineCustomization.daLMP.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.daLMP.style)?.dashArray || ''}
-                dot={false}
-                name="DA LMP"
-                connectNulls={false}
-                hide={!visibleLines.daLMP}
-              />
-              
-              {/* RT LMP - Dynamic styling */}
-              <Line
-                type="stepAfter"
-                dataKey="rtLMPLastWeek"
-                stroke={lineCustomization.rtLMP.color}
-                strokeWidth={2}
-                strokeDasharray={styleOptions.find(s => s.value === lineCustomization.rtLMP.style)?.dashArray || ''}
-                dot={false}
-                name="RT LMP"
-                connectNulls={false}
-                hide={!visibleLines.rtLMP}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        
-        {/* Line Legend */}
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <div className="flex justify-center">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {Object.entries(visibleLines)
-                .filter(([_, isVisible]) => isVisible)
-                .map(([lineKey, _]) => {
-                  const customization = lineCustomization[lineKey as keyof typeof lineCustomization];
-                  let lineName = lineKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                  
-                  // Clean up specific line names
-                  if (lineKey === 'energy') lineName = 'Dayzer Energy';
-                  if (lineKey === 'congestion') lineName = 'Dayzer Congestion';
-                  if (lineKey === 'losses') lineName = 'Dayzer Loss';
-                  if (lineKey === 'lmp') lineName = 'Dayzer LMP';
-                  if (lineKey === 'energyT1') lineName = 'Dayzer Energy t-1';
-                  if (lineKey === 'congestionT1') lineName = 'Dayzer Congestion t-1';
-                  if (lineKey === 'lossesT1') lineName = 'Dayzer Loss t-1';
-                  if (lineKey === 'lmpT1') lineName = 'Dayzer LMP t-1';
-                  if (lineKey === 'daLMP') lineName = 'DA LMP';
-                  if (lineKey === 'daCongestion') lineName = 'DA Congestion';
-                  if (lineKey === 'daEnergy') lineName = 'DA Energy';
-                  if (lineKey === 'daLoss') lineName = 'DA Loss';
-                  if (lineKey === 'rtLMP') lineName = 'RT LMP';
-                  
-                  const dashArray = styleOptions.find(s => s.value === customization.style)?.dashArray || '';
-                  
-                  return (
-                    <div key={lineKey} className="flex items-center gap-3">
-                      <svg width="35" height="4" className="flex-shrink-0">
-                        <line
-                          x1="0"
-                          y1="2"
-                          x2="35"
-                          y2="2"
-                          stroke={customization.color}
-                          strokeWidth="3"
-                          strokeDasharray={dashArray}
-                        />
-                      </svg>
-                      <span className="text-sm text-gray-700 font-medium">{lineName}</span>
+                className="px-2 py-1 text-xs font-medium text-gs-red-600 hover:text-gs-red-800 border border-gs-red-300 hover:border-gs-red-400 rounded transition-colors"
+              >
+                Hide All
+              </button>
+            </div>
+            
+            <div className="space-y-2">
+              {Object.entries(lineCustomization).map(([lineKey, customization]) => {
+                let lineName = lineKey;
+                
+                // Clean up line names
+                if (lineKey === 'dayzerEnergy') lineName = 'Dayzer Energy';
+                if (lineKey === 'dayzerCongestion') lineName = 'Dayzer Congestion';
+                if (lineKey === 'dayzerLoss') lineName = 'Dayzer Loss';
+                if (lineKey === 'dayzerLMP') lineName = 'Dayzer LMP';
+                if (lineKey === 'dayzerEnergyT1') lineName = 'Dayzer Energy t-1';
+                if (lineKey === 'dayzerCongestionT1') lineName = 'Dayzer Congestion t-1';
+                if (lineKey === 'dayzerLossT1') lineName = 'Dayzer Loss t-1';
+                if (lineKey === 'dayzerLMPT1') lineName = 'Dayzer LMP t-1';
+                if (lineKey === 'daEnergy') lineName = 'DA Energy';
+                if (lineKey === 'daCongestion') lineName = 'DA Congestion';
+                if (lineKey === 'daLoss') lineName = 'DA Loss';
+                if (lineKey === 'daLMP') lineName = 'DA LMP';
+                if (lineKey === 'rtLMP') lineName = 'RT LMP';
+                
+                return (
+                  <div 
+                    key={lineKey} 
+                    className="rounded-md p-2 bg-white shadow-sm"
+                    style={{
+                      border: `2px solid ${customization.visible ? customization.color : '#d1d5db'}`,
+                    }}
+                  >
+                    {/* Checkbox and Variable Name */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="checkbox"
+                        checked={customization.visible}
+                        onChange={() => toggleLine(lineKey as keyof typeof lineCustomization)}
+                        className="w-4 h-4 text-gs-blue-600 bg-gs-gray-100 border-gs-gray-300 rounded focus:ring-gs-blue-500"
+                      />
+                      <span className="text-xs font-bold text-gs-gray-700">{lineName}</span>
                     </div>
-                  );
-                })}
+                    
+                    {/* Only show customization options if line is visible */}
+                    {customization.visible && (
+                      <>
+                        {/* Style Selector */}
+                        <select
+                          value={customization.style}
+                          onChange={(e) => setLineCustomization(prev => ({
+                            ...prev,
+                            [lineKey]: { ...prev[lineKey as keyof typeof prev], style: e.target.value }
+                          }))}
+                          className="text-xs border border-gs-gray-300 rounded px-2 py-1 w-full mb-2"
+                        >
+                          {styleOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        
+                        {/* Color Picker - Compact Grid */}
+                        <div className="grid grid-cols-8 gap-1">
+                          {colorOptions.map(color => (
+                            <button
+                              key={color}
+                              onClick={() => setLineCustomization(prev => ({
+                                ...prev,
+                                [lineKey]: { ...prev[lineKey as keyof typeof prev], color }
+                              }))}
+                              className={`w-5 h-5 rounded border ${
+                                customization.color === color 
+                                  ? 'border-gs-gray-800 border-2' 
+                                  : 'border-gs-gray-300'
+                              }`}
+                              style={{ backgroundColor: color }}
+                              title={color}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
-}
+});
+
+export default CombinedLMPChart;

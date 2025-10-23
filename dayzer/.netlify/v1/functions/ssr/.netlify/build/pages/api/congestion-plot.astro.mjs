@@ -42,12 +42,25 @@ const GET = async ({ request }) => {
         }
       );
     }
+    const scenarioInfo = await prisma.info_scenarioid_scenarioname_mapping.findUnique({
+      where: { scenarioid },
+      select: { simulation_date: true }
+    });
+    if (!scenarioInfo?.simulation_date) {
+      return new Response(
+        JSON.stringify({ error: "No simulation date found for scenario" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const simulationDate = new Date(scenarioInfo.simulation_date);
+    simulationDate.setHours(0, 0, 0, 0);
     console.log("Starting database queries...");
+    console.log("Filtering for dates >= ", simulationDate.toISOString());
     console.log("Query 1: binding_constraints_report");
     const bindingConstraints = await prisma.$queryRaw`
       SELECT "Date", "Hour", constraintid, congestion 
       FROM binding_constraints_report 
-      WHERE itemid = 66038 AND scenarioid = ${scenarioid}
+      WHERE itemid = 66038 AND scenarioid = ${scenarioid} AND "Date" >= ${simulationDate}
     `;
     console.log("Binding constraints found:", bindingConstraints.length);
     console.log("Query 2: transmission_constraint_characteristics");
@@ -61,14 +74,14 @@ const GET = async ({ request }) => {
     const shadowPrices = await prisma.$queryRaw`
       SELECT "Date", "Hour", constraintid, shadowprice 
       FROM results_constraints 
-      WHERE scenarioid = ${scenarioid}
+      WHERE scenarioid = ${scenarioid} AND "Date" >= ${simulationDate}
     `;
     console.log("Shadow prices found:", shadowPrices.length);
     console.log("Query 4: results_units");
     const resultsUnit = await prisma.$queryRaw`
       SELECT "Date", "Hour", congestion 
       FROM results_units 
-      WHERE unitid = 66038 AND scenarioid = ${scenarioid}
+      WHERE unitid = 66038 AND scenarioid = ${scenarioid} AND "Date" >= ${simulationDate}
     `;
     console.log("Results units found:", resultsUnit.length);
     if (bindingConstraints.length === 0) {

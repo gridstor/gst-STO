@@ -14,7 +14,6 @@ const GET = async ({ request }) => {
       connectionString: process.env.DATABASE_URL_SECONDARY,
       ssl: { rejectUnauthorized: false }
     });
-    console.log("Secondary PostgreSQL connection created");
     const url = new URL(request.url);
     const requestedScenarioid = url.searchParams.get("scenarioid");
     let scenarioid = null;
@@ -63,11 +62,6 @@ const GET = async ({ request }) => {
     const lastWeekEnd = new Date(simulationDate);
     lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
     lastWeekEnd.setHours(23, 59, 59, 999);
-    console.log("Date ranges:", {
-      simulation: simulationDate.toISOString(),
-      thisWeek: `${thisWeekStart.toISOString()} to ${thisWeekEnd.toISOString()}`,
-      lastWeek: `${lastWeekStart.toISOString()} to ${lastWeekEnd.toISOString()}`
-    });
     const thisWeekData = await prisma.results_units.findMany({
       where: {
         scenarioid,
@@ -89,16 +83,6 @@ const GET = async ({ request }) => {
     });
     let lastWeekData = [];
     try {
-      const entitiesResult = await secondaryPool.query(`
-        SELECT DISTINCT entity FROM yes_fundamentals LIMIT 20
-      `);
-      const entities = entitiesResult.rows.map((row) => row.entity);
-      console.log("Available entities:", entities);
-      const attributesResult = await secondaryPool.query(`
-        SELECT DISTINCT attribute FROM yes_fundamentals LIMIT 20
-      `);
-      const attributes = attributesResult.rows.map((row) => row.attribute);
-      console.log("Available attributes:", attributes);
       const lastWeekResult = await secondaryPool.query(`
         SELECT local_datetime_ib, value 
         FROM yes_fundamentals 
@@ -109,20 +93,10 @@ const GET = async ({ request }) => {
         ORDER BY local_datetime_ib ASC
       `, ["GOLETA_6_N100", "DALMP", lastWeekStart.toISOString(), lastWeekEnd.toISOString()]);
       lastWeekData = lastWeekResult.rows;
-      console.log("Last week query result count:", lastWeekData.length);
-      if (lastWeekData.length > 0) {
-        console.log("First last week record:", lastWeekData[0]);
-        console.log("Last last week record:", lastWeekData[lastWeekData.length - 1]);
-      }
     } catch (queryError) {
       console.error("Failed to query secondary database:", queryError);
       lastWeekData = [];
     }
-    console.log("Query results:", {
-      thisWeekRecords: thisWeekData.length,
-      lastWeekRecords: lastWeekData.length,
-      secondaryDBAvailable: !!secondaryPool
-    });
     const combinedData = [];
     for (let day = 0; day < 7; day++) {
       for (let hour = 0; hour < 24; hour++) {

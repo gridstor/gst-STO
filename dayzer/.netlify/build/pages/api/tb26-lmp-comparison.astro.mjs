@@ -14,7 +14,6 @@ const GET = async ({ request }) => {
       connectionString: process.env.DATABASE_URL_SECONDARY,
       ssl: { rejectUnauthorized: false }
     });
-    console.log("Secondary PostgreSQL connection created");
     const url = new URL(request.url);
     const requestedScenarioid = url.searchParams.get("scenarioid");
     const comparisonPeriod = url.searchParams.get("period") || "lastWeek";
@@ -63,12 +62,6 @@ const GET = async ({ request }) => {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
-    console.log("Date ranges:", {
-      simulation: simulationDate.toISOString(),
-      thisWeek: `${thisWeekStart.toISOString()} to ${thisWeekEnd.toISOString()}`,
-      comparison: `${comparisonStart.toISOString()} to ${comparisonEnd.toISOString()}`,
-      comparisonType: comparisonPeriod
-    });
     const thisWeekData = await prisma.results_units.findMany({
       where: {
         scenarioid,
@@ -90,21 +83,7 @@ const GET = async ({ request }) => {
     });
     let comparisonData = [];
     try {
-      const entitiesCheck = await secondaryPool.query(`
-        SELECT DISTINCT entity 
-        FROM yes_fundamentals 
-        WHERE entity ILIKE '%GOLETA%'
-        LIMIT 10
-      `);
-      console.log("Available Goleta entities:", entitiesCheck.rows.map((r) => r.entity));
-      const attributesCheck = await secondaryPool.query(`
-        SELECT DISTINCT attribute 
-        FROM yes_fundamentals 
-        WHERE entity ILIKE '%GOLETA%'
-        LIMIT 20
-      `);
-      console.log("Available attributes for Goleta:", attributesCheck.rows.map((r) => r.attribute));
-      let comparisonResult = await secondaryPool.query(`
+      const comparisonResult = await secondaryPool.query(`
         SELECT local_datetime_ib, value 
         FROM yes_fundamentals 
         WHERE entity = $1 
@@ -114,36 +93,10 @@ const GET = async ({ request }) => {
         ORDER BY local_datetime_ib ASC
       `, ["GOLETA_6_N100", "DALMP", comparisonStart.toISOString(), comparisonEnd.toISOString()]);
       comparisonData = comparisonResult.rows;
-      console.log("DALMP query result count:", comparisonData.length);
-      if (comparisonData.length === 0) {
-        console.log("No DALMP data found, trying RTLMP...");
-        comparisonResult = await secondaryPool.query(`
-          SELECT local_datetime_ib, value 
-          FROM yes_fundamentals 
-          WHERE entity = $1 
-            AND attribute = $2 
-            AND local_datetime_ib >= $3 
-            AND local_datetime_ib <= $4
-          ORDER BY local_datetime_ib ASC
-        `, ["GOLETA_6_N100", "RTLMP", comparisonStart.toISOString(), comparisonEnd.toISOString()]);
-        comparisonData = comparisonResult.rows;
-        console.log("RTLMP query result count:", comparisonData.length);
-      }
-      if (comparisonData.length > 0) {
-        console.log("First comparison record:", comparisonData[0]);
-        console.log("Last comparison record:", comparisonData[comparisonData.length - 1]);
-      } else {
-        console.log("No historical data found for GOLETA_6_N100");
-      }
     } catch (queryError) {
       console.error("Failed to query secondary database:", queryError);
       comparisonData = [];
     }
-    console.log("Query results:", {
-      thisWeekRecords: thisWeekData.length,
-      comparisonRecords: comparisonData.length,
-      comparisonPeriod
-    });
     const combinedData = [];
     for (let day = 0; day < 7; day++) {
       for (let hour = 0; hour < 24; hour++) {
@@ -164,19 +117,19 @@ const GET = async ({ request }) => {
           const dataDate = new Date(d.local_datetime_ib);
           return dataDate.getTime() === comparisonDateTime.getTime();
         });
-        let comparisonLMP = null;
+        let lastWeekLMP = null;
         if (hourlyRecords.length > 0) {
           const validRecords = hourlyRecords.filter((r) => r.value !== null && !isNaN(Number(r.value)));
           if (validRecords.length > 0) {
             const sum = validRecords.reduce((acc, r) => acc + Number(r.value), 0);
-            comparisonLMP = sum / validRecords.length;
+            lastWeekLMP = sum / validRecords.length;
           }
         }
         combinedData.push({
           datetime: currentDate.toISOString(),
           dayName,
           thisWeekLMP: thisWeekMatch?.lmp || null,
-          comparisonLMP
+          lastWeekLMP
         });
       }
     }

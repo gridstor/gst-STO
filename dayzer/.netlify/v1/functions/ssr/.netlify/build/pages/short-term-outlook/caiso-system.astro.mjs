@@ -4,7 +4,8 @@ import 'kleur/colors';
 import { $ as $$Layout } from '../../chunks/Layout_W-IpgH_B.mjs';
 import { jsx, jsxs } from 'react/jsx-runtime';
 import { useState, useEffect, useMemo } from 'react';
-import { u as useScenario, S as ScenarioProvider, a as ScenarioInfo } from '../../chunks/ScenarioInfo_D_RzoEer.mjs';
+import { u as useScenario, S as ScenarioProvider } from '../../chunks/ScenarioContext_DGS9MIDa.mjs';
+import { S as ScenarioInfo } from '../../chunks/ScenarioInfo_C_ZR89MS.mjs';
 import { M as MECOverviewChart } from '../../chunks/MECOverviewChart_Ck8gcaeK.mjs';
 export { renderers } from '../../renderers.mjs';
 

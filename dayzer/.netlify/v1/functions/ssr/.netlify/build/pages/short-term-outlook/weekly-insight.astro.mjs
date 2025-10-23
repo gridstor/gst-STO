@@ -1,16 +1,231 @@
 /* empty css                                    */
-import { f as createComponent, n as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_DbXtrAO0.mjs';
+import { f as createComponent, n as renderComponent, r as renderTemplate } from '../../chunks/astro/server_DbXtrAO0.mjs';
 import 'kleur/colors';
 import { $ as $$Layout } from '../../chunks/Layout_W-IpgH_B.mjs';
-import { jsxs, jsx, Fragment } from 'react/jsx-runtime';
+import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useState, useEffect } from 'react';
+import { S as ScenarioProvider } from '../../chunks/ScenarioContext_DGS9MIDa.mjs';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, ReferenceArea } from 'recharts';
 export { renderers } from '../../renderers.mjs';
 
-function SectionHeader({ title, description }) {
-  return /* @__PURE__ */ jsxs("div", { className: "text-center mb-8", children: [
-    /* @__PURE__ */ jsx("h2", { className: "text-2xl font-semibold text-gs-gray-900 mb-2", children: title }),
-    description && /* @__PURE__ */ jsx("p", { className: "text-gs-gray-600 text-base max-w-3xl mx-auto", children: description })
+function ScenarioDatePicker({ onDateChange } = {}) {
+  const [availableDates, setAvailableDates] = useState([]);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(/* @__PURE__ */ new Date());
+  useEffect(() => {
+    console.log("📅 DATE PICKER COMPONENT MOUNTED");
+    const fetchAvailableDates = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        console.log("📅 DATE PICKER: Fetching available dates...");
+        const response = await fetch("/api/available-scenario-dates");
+        if (!response.ok) {
+          throw new Error(`Failed to fetch available dates: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("Available dates received:", data);
+        console.log("Available dates count:", data.availableDates?.length || 0);
+        setAvailableDates(data.availableDates || []);
+        const defaultDate = data.defaultDate || data.availableDates[0]?.date;
+        if (defaultDate) {
+          setSelectedDate(defaultDate);
+          handleDateSelection(defaultDate, data.availableDates);
+        }
+      } catch (err) {
+        console.error("Error fetching available dates:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch available dates");
+        const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+        setSelectedDate(today);
+        if (onDateChange) {
+          onDateChange(today, 0, null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAvailableDates();
+  }, []);
+  const handleDateSelection = (dateStr, dates = availableDates) => {
+    const futureWeekScenario = dates.find((d) => d.date === dateStr);
+    if (!futureWeekScenario) return;
+    const selectedDate2 = new Date(dateStr);
+    const pastWeekDate = new Date(selectedDate2);
+    pastWeekDate.setDate(selectedDate2.getDate() - 7);
+    const pastWeekDateStr = pastWeekDate.toISOString().split("T")[0];
+    const pastWeekScenario = dates.find((d) => d.date === pastWeekDateStr);
+    console.log(`SELECTED: ${dateStr} → Future: ${futureWeekScenario.scenarioid}, Past: ${pastWeekScenario?.scenarioid || "None"}`);
+    setSelectedDate(dateStr);
+    setIsCalendarOpen(false);
+    window.dispatchEvent(new CustomEvent("scenarioChanged", {
+      detail: {
+        selectedDate: dateStr,
+        currentWeekScenario: futureWeekScenario.scenarioid,
+        lastWeekScenario: pastWeekScenario?.scenarioid || null
+      }
+    }));
+    if (onDateChange) {
+      onDateChange(
+        dateStr,
+        futureWeekScenario.scenarioid,
+        pastWeekScenario?.scenarioid || null
+      );
+    }
+  };
+  const formatDisplayDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  };
+  const generateCalendarGrid = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek2 = firstDay.getDay();
+    const grid = [];
+    for (let i = 0; i < startDayOfWeek2; i++) {
+      grid.push(null);
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = new Date(year, month, day).toISOString().split("T")[0];
+      const currentDate = new Date(dateStr);
+      const cutoffDate = /* @__PURE__ */ new Date("2025-09-16");
+      const isAfterCutoff = currentDate > cutoffDate;
+      const scenarioForDate = availableDates.find((d) => d.date === dateStr);
+      if (scenarioForDate && isAfterCutoff) {
+        grid.push(scenarioForDate);
+      } else {
+        grid.push({ dayNumber: day });
+      }
+    }
+    return { grid, startDayOfWeek: startDayOfWeek2 };
+  };
+  const navigateMonth = (direction) => {
+    setCurrentMonth((prev) => {
+      const newMonth = new Date(prev);
+      if (direction === "prev") {
+        newMonth.setMonth(prev.getMonth() - 1);
+      } else {
+        newMonth.setMonth(prev.getMonth() + 1);
+      }
+      return newMonth;
+    });
+  };
+  if (loading) {
+    return /* @__PURE__ */ jsx("div", { className: "bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6", children: /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600", children: "Loading available dates..." }) }) });
+  }
+  if (error) {
+    return /* @__PURE__ */ jsx("div", { className: "bg-red-50 border border-red-200 rounded-lg p-4 mb-6", children: /* @__PURE__ */ jsxs("div", { className: "text-center", children: [
+      /* @__PURE__ */ jsx("div", { className: "text-red-600 font-medium mb-1", children: "Error loading scenario dates" }),
+      /* @__PURE__ */ jsx("div", { className: "text-sm text-red-500", children: error })
+    ] }) });
+  }
+  const { grid: calendarGrid} = generateCalendarGrid();
+  const selectedScenario = availableDates.find((d) => d.date === selectedDate);
+  const currentMonthName = currentMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric"
+  });
+  const lastWeekScenario = selectedScenario?.hasPreviousWeek ? availableDates.find((d) => {
+    const selectedDate2 = new Date(selectedScenario.date);
+    const pastWeekDate = new Date(selectedDate2);
+    pastWeekDate.setDate(selectedDate2.getDate() - 7);
+    return d.date === pastWeekDate.toISOString().split("T")[0];
+  }) : null;
+  return /* @__PURE__ */ jsxs("div", { className: "w-full relative", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-center flex-wrap gap-x-8 gap-y-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 relative", children: [
+        /* @__PURE__ */ jsx("span", { className: "text-sm font-medium text-gs-gray-600", children: "Simulation Date:" }),
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            onClick: () => {
+              console.log("📅 CALENDAR BUTTON CLICKED");
+              setIsCalendarOpen(!isCalendarOpen);
+            },
+            className: "text-sm font-semibold text-gs-gray-900 hover:text-gs-blue-600 cursor-pointer underline decoration-dotted underline-offset-2 flex items-center gap-1 transition-colors font-mono",
+            children: [
+              /* @__PURE__ */ jsx("span", { children: selectedDate ? formatDisplayDate(selectedDate) : "Select Date" }),
+              /* @__PURE__ */ jsx("svg", { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" }) })
+            ]
+          }
+        ),
+        isCalendarOpen && /* @__PURE__ */ jsxs("div", { className: "absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded shadow-lg z-50 w-[280px]", children: [
+          /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between", children: [
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: () => navigateMonth("prev"),
+                className: "text-gray-500 hover:text-gray-700 p-1",
+                children: /* @__PURE__ */ jsx("svg", { className: "h-4 w-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 19l-7-7 7-7" }) })
+              }
+            ),
+            /* @__PURE__ */ jsx("h4", { className: "text-sm font-semibold text-gray-700", children: currentMonthName }),
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1", children: [
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => navigateMonth("next"),
+                  className: "text-gray-500 hover:text-gray-700 p-1",
+                  children: /* @__PURE__ */ jsx("svg", { className: "h-4 w-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 5l7 7-7 7" }) })
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => setIsCalendarOpen(false),
+                  className: "text-gray-500 hover:text-gray-700 text-xs ml-2",
+                  children: "Close"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "p-4", children: [
+            /* @__PURE__ */ jsx("div", { className: "grid grid-cols-7 gap-1 mb-2", children: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => /* @__PURE__ */ jsx("div", { className: "text-xs text-gray-500 text-center p-1 font-medium", children: day }, day)) }),
+            /* @__PURE__ */ jsx("div", { className: "grid grid-cols-7 gap-1", children: calendarGrid.map((dateObj, index) => /* @__PURE__ */ jsx("div", { className: "aspect-square", children: dateObj && "date" in dateObj ? (
+              // Selectable date with scenario
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => handleDateSelection(dateObj.date),
+                  className: `w-full h-full text-xs rounded text-center transition-colors ${selectedDate === dateObj.date ? "bg-blue-600 text-white font-medium" : "text-gray-700 hover:bg-blue-100"}`,
+                  children: new Date(dateObj.date).getDate()
+                }
+              )
+            ) : dateObj && "dayNumber" in dateObj ? (
+              // Non-selectable date (greyed out)
+              /* @__PURE__ */ jsx("div", { className: "w-full h-full text-xs text-gray-300 text-center p-2 cursor-not-allowed", children: dateObj.dayNumber })
+            ) : (
+              // Empty cell (before month starts)
+              /* @__PURE__ */ jsx("div", { className: "w-full h-full" })
+            ) }, index)) })
+          ] })
+        ] })
+      ] }),
+      selectedScenario && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsx("span", { className: "text-sm font-medium text-gs-gray-600", children: "Forecast Scenario ID:" }),
+        /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gs-blue-600 font-mono", children: selectedScenario.scenarioid })
+      ] }),
+      selectedScenario?.hasPreviousWeek && lastWeekScenario && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsx("span", { className: "text-sm font-medium text-gs-gray-600", children: "Historical Scenario ID:" }),
+        /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gs-blue-600 font-mono", children: lastWeekScenario.scenarioid })
+      ] })
+    ] }),
+    isCalendarOpen && /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: "fixed inset-0 z-40",
+        onClick: () => setIsCalendarOpen(false)
+      }
+    )
   ] });
 }
 
@@ -665,9 +880,6 @@ function CombinedLoadChart() {
     return () => {
       window.removeEventListener("scenarioChanged", handleScenarioChange);
     };
-  }, []);
-  useEffect(() => {
-    fetchData();
   }, []);
   useEffect(() => {
     if (currentWeekScenarioId || lastWeekScenarioId) {
@@ -2007,9 +2219,6 @@ function CombinedRenewablesChart() {
     return () => window.removeEventListener("scenarioChanged", handleScenarioChange);
   }, []);
   useEffect(() => {
-    fetchData();
-  }, []);
-  useEffect(() => {
     if (currentWeekScenarioId || lastWeekScenarioId) {
       fetchData();
     }
@@ -2923,9 +3132,6 @@ function CombinedLMPChart() {
     };
     window.addEventListener("scenarioChanged", handleScenarioChange);
     return () => window.removeEventListener("scenarioChanged", handleScenarioChange);
-  }, []);
-  useEffect(() => {
-    fetchData();
   }, []);
   useEffect(() => {
     if (currentWeekScenarioId || lastWeekScenarioId) {
@@ -3881,7 +4087,6 @@ function CombinedWeatherChart() {
     }
   };
   useEffect(() => {
-    fetchData();
     const handleScenarioChange = (event) => {
       console.log("Weather chart received scenario change:", event.detail);
       if (event.detail.currentWeekScenario) {
@@ -3893,9 +4098,6 @@ function CombinedWeatherChart() {
     };
     window.addEventListener("scenarioChanged", handleScenarioChange);
     return () => window.removeEventListener("scenarioChanged", handleScenarioChange);
-  }, []);
-  useEffect(() => {
-    fetchData();
   }, []);
   useEffect(() => {
     if (currentWeekScenarioId || lastWeekScenarioId) {
@@ -4464,226 +4666,44 @@ function CombinedWeatherChart() {
   ] });
 }
 
-function ScenarioDatePicker({ onDateChange } = {}) {
-  const [availableDates, setAvailableDates] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(/* @__PURE__ */ new Date());
-  useEffect(() => {
-    console.log("📅 DATE PICKER COMPONENT MOUNTED");
-    const fetchAvailableDates = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        console.log("📅 DATE PICKER: Fetching available dates...");
-        const response = await fetch("/api/available-scenario-dates");
-        if (!response.ok) {
-          throw new Error(`Failed to fetch available dates: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log("Available dates received:", data);
-        console.log("Available dates count:", data.availableDates?.length || 0);
-        setAvailableDates(data.availableDates || []);
-        const defaultDate = data.defaultDate || data.availableDates[0]?.date;
-        if (defaultDate) {
-          setSelectedDate(defaultDate);
-          handleDateSelection(defaultDate, data.availableDates);
-        }
-      } catch (err) {
-        console.error("Error fetching available dates:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch available dates");
-        const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-        setSelectedDate(today);
-        if (onDateChange) {
-          onDateChange(today, 0, null);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAvailableDates();
-  }, []);
-  const handleDateSelection = (dateStr, dates = availableDates) => {
-    const futureWeekScenario = dates.find((d) => d.date === dateStr);
-    if (!futureWeekScenario) return;
-    const selectedDate2 = new Date(dateStr);
-    const pastWeekDate = new Date(selectedDate2);
-    pastWeekDate.setDate(selectedDate2.getDate() - 7);
-    const pastWeekDateStr = pastWeekDate.toISOString().split("T")[0];
-    const pastWeekScenario = dates.find((d) => d.date === pastWeekDateStr);
-    console.log(`SELECTED: ${dateStr} → Future: ${futureWeekScenario.scenarioid}, Past: ${pastWeekScenario?.scenarioid || "None"}`);
-    setSelectedDate(dateStr);
-    setIsCalendarOpen(false);
-    window.dispatchEvent(new CustomEvent("scenarioChanged", {
-      detail: {
-        selectedDate: dateStr,
-        currentWeekScenario: futureWeekScenario.scenarioid,
-        lastWeekScenario: pastWeekScenario?.scenarioid || null
-      }
-    }));
-    if (onDateChange) {
-      onDateChange(
-        dateStr,
-        futureWeekScenario.scenarioid,
-        pastWeekScenario?.scenarioid || null
-      );
-    }
-  };
-  const formatDisplayDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    });
-  };
-  const generateCalendarGrid = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startDayOfWeek2 = firstDay.getDay();
-    const grid = [];
-    for (let i = 0; i < startDayOfWeek2; i++) {
-      grid.push(null);
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = new Date(year, month, day).toISOString().split("T")[0];
-      const currentDate = new Date(dateStr);
-      const cutoffDate = /* @__PURE__ */ new Date("2025-09-16");
-      const isAfterCutoff = currentDate > cutoffDate;
-      const scenarioForDate = availableDates.find((d) => d.date === dateStr);
-      if (scenarioForDate && isAfterCutoff) {
-        grid.push(scenarioForDate);
-      } else {
-        grid.push({ dayNumber: day });
-      }
-    }
-    return { grid, startDayOfWeek: startDayOfWeek2 };
-  };
-  const navigateMonth = (direction) => {
-    setCurrentMonth((prev) => {
-      const newMonth = new Date(prev);
-      if (direction === "prev") {
-        newMonth.setMonth(prev.getMonth() - 1);
-      } else {
-        newMonth.setMonth(prev.getMonth() + 1);
-      }
-      return newMonth;
-    });
-  };
-  if (loading) {
-    return /* @__PURE__ */ jsx("div", { className: "bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6", children: /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600", children: "Loading available dates..." }) }) });
-  }
-  if (error) {
-    return /* @__PURE__ */ jsx("div", { className: "bg-red-50 border border-red-200 rounded-lg p-4 mb-6", children: /* @__PURE__ */ jsxs("div", { className: "text-center", children: [
-      /* @__PURE__ */ jsx("div", { className: "text-red-600 font-medium mb-1", children: "Error loading scenario dates" }),
-      /* @__PURE__ */ jsx("div", { className: "text-sm text-red-500", children: error })
-    ] }) });
-  }
-  const { grid: calendarGrid} = generateCalendarGrid();
-  const selectedScenario = availableDates.find((d) => d.date === selectedDate);
-  const currentMonthName = currentMonth.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric"
-  });
-  return /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-6", children: [
-    selectedScenario && /* @__PURE__ */ jsxs("div", { className: "text-sm text-gray-600", children: [
-      /* @__PURE__ */ jsxs("div", { className: "mb-1", children: [
-        /* @__PURE__ */ jsx("span", { className: "font-medium", children: "Forecast Scenario ID:" }),
-        " ",
-        selectedScenario.scenarioid
-      ] }),
-      selectedScenario.hasPreviousWeek && /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsx("span", { className: "font-medium", children: "Historical Scenario ID:" }),
-        " ",
-        availableDates.find((d) => {
-          const selectedDate2 = new Date(selectedScenario.date);
-          const pastWeekDate = new Date(selectedDate2);
-          pastWeekDate.setDate(selectedDate2.getDate() - 7);
-          return d.date === pastWeekDate.toISOString().split("T")[0];
-        })?.scenarioid || "N/A"
-      ] })
+function WeeklyInsightPage() {
+  return /* @__PURE__ */ jsx(ScenarioProvider, { children: /* @__PURE__ */ jsx("div", { className: "py-12 space-y-12", children: /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8", children: [
+    /* @__PURE__ */ jsxs("div", { className: "mb-12", children: [
+      /* @__PURE__ */ jsx("h1", { className: "text-3xl font-bold text-gs-gray-900 mb-2", children: "Market Operations Outlook" }),
+      /* @__PURE__ */ jsx("p", { className: "text-gs-gray-600", children: "Weekly forecast analysis and historical comparisons" })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "relative", children: [
-      /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600 mb-1", children: /* @__PURE__ */ jsx("span", { className: "font-medium", children: "Simulation Date:" }) }),
-      /* @__PURE__ */ jsxs(
-        "button",
-        {
-          onClick: () => {
-            console.log("📅 CALENDAR BUTTON CLICKED");
-            setIsCalendarOpen(!isCalendarOpen);
-          },
-          className: "bg-white border border-gray-300 rounded px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 flex items-center gap-2",
-          children: [
-            selectedDate ? formatDisplayDate(selectedDate) : "Select Date",
-            /* @__PURE__ */ jsx("svg", { className: "h-4 w-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" }) })
-          ]
-        }
-      ),
-      isCalendarOpen && /* @__PURE__ */ jsxs("div", { className: "absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 w-[280px]", children: [
-        /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between", children: [
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              onClick: () => navigateMonth("prev"),
-              className: "text-gray-500 hover:text-gray-700 p-1",
-              children: /* @__PURE__ */ jsx("svg", { className: "h-4 w-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 19l-7-7 7-7" }) })
-            }
-          ),
-          /* @__PURE__ */ jsx("h4", { className: "text-sm font-semibold text-gray-700", children: currentMonthName }),
-          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1", children: [
-            /* @__PURE__ */ jsx(
-              "button",
-              {
-                onClick: () => navigateMonth("next"),
-                className: "text-gray-500 hover:text-gray-700 p-1",
-                children: /* @__PURE__ */ jsx("svg", { className: "h-4 w-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 5l7 7-7 7" }) })
-              }
-            ),
-            /* @__PURE__ */ jsx(
-              "button",
-              {
-                onClick: () => setIsCalendarOpen(false),
-                className: "text-gray-500 hover:text-gray-700 text-xs ml-2",
-                children: "Close"
-              }
-            )
-          ] })
+    /* @__PURE__ */ jsx("div", { className: "mb-12 bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6", children: /* @__PURE__ */ jsx(ScenarioDatePicker, {}) }),
+    /* @__PURE__ */ jsxs("div", { className: "space-y-12", children: [
+      /* @__PURE__ */ jsxs("section", { id: "pricing", className: "scroll-mt-24", children: [
+        /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsx("h2", { className: "text-2xl font-semibold text-gs-gray-900 mb-2", children: "Pricing" }),
+          /* @__PURE__ */ jsx("p", { className: "text-gs-gray-600", children: "LMP forecast analysis and price component breakdown" })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "p-4", children: [
-          /* @__PURE__ */ jsx("div", { className: "grid grid-cols-7 gap-1 mb-2", children: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => /* @__PURE__ */ jsx("div", { className: "text-xs text-gray-500 text-center p-1 font-medium", children: day }, day)) }),
-          /* @__PURE__ */ jsx("div", { className: "grid grid-cols-7 gap-1", children: calendarGrid.map((dateObj, index) => /* @__PURE__ */ jsx("div", { className: "aspect-square", children: dateObj && "date" in dateObj ? (
-            // Selectable date with scenario
-            /* @__PURE__ */ jsx(
-              "button",
-              {
-                onClick: () => handleDateSelection(dateObj.date),
-                className: `w-full h-full text-xs rounded text-center transition-colors ${selectedDate === dateObj.date ? "bg-blue-600 text-white font-medium" : "text-gray-700 hover:bg-blue-100"}`,
-                children: new Date(dateObj.date).getDate()
-              }
-            )
-          ) : dateObj && "dayNumber" in dateObj ? (
-            // Non-selectable date (greyed out)
-            /* @__PURE__ */ jsx("div", { className: "w-full h-full text-xs text-gray-300 text-center p-2 cursor-not-allowed", children: dateObj.dayNumber })
-          ) : (
-            // Empty cell (before month starts)
-            /* @__PURE__ */ jsx("div", { className: "w-full h-full" })
-          ) }, index)) })
+        /* @__PURE__ */ jsx(CombinedLMPChart, {})
+      ] }),
+      /* @__PURE__ */ jsxs("section", { id: "fundamentals", className: "scroll-mt-24", children: [
+        /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsx("h2", { className: "text-2xl font-semibold text-gs-gray-900 mb-2", children: "Fundamentals" }),
+          /* @__PURE__ */ jsx("p", { className: "text-gs-gray-600", children: "Load and renewable generation forecasts" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "mb-8", children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-xl font-medium text-gs-gray-900 mb-4", children: "Load Forecast" }),
+          /* @__PURE__ */ jsx(CombinedLoadChart, {})
+        ] }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-xl font-medium text-gs-gray-900 mb-4", children: "Renewables Forecast" }),
+          /* @__PURE__ */ jsx(CombinedRenewablesChart, {})
         ] })
+      ] }),
+      /* @__PURE__ */ jsxs("section", { id: "weather", className: "scroll-mt-24", children: [
+        /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsx("h2", { className: "text-2xl font-semibold text-gs-gray-900 mb-2", children: "Weather" }),
+          /* @__PURE__ */ jsx("p", { className: "text-gs-gray-600", children: "Temperature and degree-day forecasts" })
+        ] }),
+        /* @__PURE__ */ jsx(CombinedWeatherChart, {})
       ] })
-    ] }),
-    isCalendarOpen && /* @__PURE__ */ jsx(
-      "div",
-      {
-        className: "fixed inset-0 z-40",
-        onClick: () => setIsCalendarOpen(false)
-      }
-    )
-  ] });
+    ] })
+  ] }) }) });
 }
 
 const $$WeeklyInsight = createComponent(($$result, $$props, $$slots) => {
@@ -4698,7 +4718,7 @@ const $$WeeklyInsight = createComponent(($$result, $$props, $$slots) => {
     { label: "Weekly Insight", href: "/short-term-outlook/weekly-insight" },
     { label: "Likeday Tool", href: "/short-term-outlook/likeday" }
   ];
-  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, { "title": "Weekly Insight", "pageTitle": "Short Term Outlook", "subNavLinks": subNavLinks }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<div class="py-12 space-y-12"> <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> <!-- Page Title --> ${renderComponent($$result2, "SectionHeader", SectionHeader, { "title": "Market Operations Outlook", "description": "Weekly forecast analysis and historical comparisons", "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/Administrator/new_website/dayzer/src/components/ui/SectionHeader", "client:component-export": "SectionHeader" })} <!-- Scenario Date Picker --> ${renderComponent($$result2, "ScenarioDatePicker", ScenarioDatePicker, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/Administrator/new_website/dayzer/src/components/common/ScenarioDatePicker.tsx", "client:component-export": "default" })} <div class="space-y-8"> <!-- Pricing Section Header --> <div class="flex items-center mb-6"> <div class="w-1 h-8 bg-gs-green-600 rounded-r mr-4"></div> <h2 class="text-3xl font-semibold text-gs-gray-900">Pricing</h2> </div> <!-- LMP Forecast Section --> <div class="bg-white border-l-4 border-gs-green-500 rounded-lg shadow-gs-sm p-8"> <!-- Combined LMP Forecast and Last Week --> <div class="space-y-6"> ${renderComponent($$result2, "CombinedLMPChart", CombinedLMPChart, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/Administrator/new_website/dayzer/src/components/common/CombinedLMPChart.tsx", "client:component-export": "default" })} </div> </div> <!-- Fundamentals Section Header --> <div class="flex items-center mb-6"> <div class="w-1 h-8 bg-gs-blue-600 rounded-r mr-4"></div> <h2 class="text-3xl font-semibold text-gs-gray-900">Fundamentals</h2> </div> <!-- Load Forecast Section --> <div class="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-8"> <!-- Combined Load Forecast and Last Week --> <div class="space-y-6"> ${renderComponent($$result2, "CombinedLoadChart", CombinedLoadChart, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/Administrator/new_website/dayzer/src/components/common/CombinedLoadChart.tsx", "client:component-export": "default" })} </div> </div> <!-- Renewables Forecast Section --> <div class="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-8"> <!-- Combined Renewables Forecast and Last Week --> <div class="space-y-6"> ${renderComponent($$result2, "CombinedRenewablesChart", CombinedRenewablesChart, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/Administrator/new_website/dayzer/src/components/common/CombinedRenewablesChart.tsx", "client:component-export": "default" })} </div> </div> <!-- Weather Section Header --> <div class="flex items-center mb-6"> <div class="w-1 h-8 bg-gs-amber-500 rounded-r mr-4"></div> <h2 class="text-3xl font-semibold text-gs-gray-900">Weather</h2> </div> <!-- Weather Section Content --> <div class="bg-white border-l-4 border-gs-amber-500 rounded-lg shadow-gs-sm p-8"> <!-- Combined Weather Forecast and Last Week --> <div class="space-y-6"> ${renderComponent($$result2, "CombinedWeatherChart", CombinedWeatherChart, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/Administrator/new_website/dayzer/src/components/common/CombinedWeatherChart.tsx", "client:component-export": "default" })} </div> </div> </div> </div> </div> ` })}`;
+  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, { "title": "Weekly Insight", "pageTitle": "Short Term Outlook", "subNavLinks": subNavLinks }, { "default": ($$result2) => renderTemplate` ${renderComponent($$result2, "WeeklyInsightPage", WeeklyInsightPage, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/Administrator/new_website/dayzer/src/components/WeeklyInsightPage.tsx", "client:component-export": "default" })} ` })}`;
 }, "C:/Users/Administrator/new_website/dayzer/src/pages/short-term-outlook/weekly-insight.astro", void 0);
 
 const $$file = "C:/Users/Administrator/new_website/dayzer/src/pages/short-term-outlook/weekly-insight.astro";

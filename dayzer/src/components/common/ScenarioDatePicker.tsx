@@ -192,50 +192,59 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
     year: 'numeric' 
   });
 
-  return (
-    <div className="flex items-center justify-between mb-6">
-      {/* Scenario Info Display */}
-      {selectedScenario && (
-        <div className="text-sm text-gray-600">
-          <div className="mb-1">
-            <span className="font-medium">Forecast Scenario ID:</span> {selectedScenario.scenarioid}
-          </div>
-          {selectedScenario.hasPreviousWeek && (
-            <div>
-              <span className="font-medium">Historical Scenario ID:</span> {
-                availableDates.find(d => {
-                  const selectedDate = new Date(selectedScenario.date);
-                  const pastWeekDate = new Date(selectedDate);
-                  pastWeekDate.setDate(selectedDate.getDate() - 7);
-                  return d.date === pastWeekDate.toISOString().split('T')[0];
-                })?.scenarioid || 'N/A'
-              }
-            </div>
-          )}
-        </div>
-      )}
-      
-      {/* Date Picker */}
-      <div className="relative">
-        <div className="text-sm text-gray-600 mb-1">
-          <span className="font-medium">Simulation Date:</span>
-        </div>
-        <button
-          onClick={() => {
-            console.log('📅 CALENDAR BUTTON CLICKED');
-            setIsCalendarOpen(!isCalendarOpen);
-          }}
-          className="bg-white border border-gray-300 rounded px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 flex items-center gap-2"
-        >
-          {selectedDate ? formatDisplayDate(selectedDate) : 'Select Date'}
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        </button>
+  const lastWeekScenario = selectedScenario?.hasPreviousWeek ? availableDates.find(d => {
+    const selectedDate = new Date(selectedScenario.date);
+    const pastWeekDate = new Date(selectedDate);
+    pastWeekDate.setDate(selectedDate.getDate() - 7);
+    return d.date === pastWeekDate.toISOString().split('T')[0];
+  }) : null;
 
-        {/* Calendar Dropdown */}
-        {isCalendarOpen && (
-          <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 w-[280px]">
+  // Calculate date ranges
+  const forecastDateRange = selectedScenario ? (() => {
+    const simDate = new Date(selectedScenario.date);
+    const startDate = new Date(simDate); // Starts ON simulation date
+    const endDate = new Date(simDate);
+    endDate.setDate(simDate.getDate() + 7); // 7 days forward from simulation date
+    return {
+      start: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      end: endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    };
+  })() : null;
+
+  const historicalDateRange = selectedScenario ? (() => {
+    const simDate = new Date(selectedScenario.date);
+    const endDate = new Date(simDate);
+    endDate.setDate(simDate.getDate() - 1); // Day before simulation date
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - 6); // 7 days back
+    return {
+      start: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      end: endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    };
+  })() : null;
+
+  return (
+    <div className="w-full relative">
+      <div className="flex items-start gap-x-12 gap-y-4 flex-wrap">
+        {/* Column 1: Simulation Date */}
+        <div className="flex items-center gap-2 relative">
+          <span className="text-sm font-medium text-gs-gray-600">Simulation Date:</span>
+          <button
+            onClick={() => {
+              console.log('📅 CALENDAR BUTTON CLICKED');
+              setIsCalendarOpen(!isCalendarOpen);
+            }}
+            className="text-sm font-semibold text-gs-gray-900 hover:text-gs-blue-600 cursor-pointer underline decoration-dotted underline-offset-2 flex items-center gap-1 transition-colors font-mono"
+          >
+            <span>{selectedDate ? formatDisplayDate(selectedDate) : 'Select Date'}</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </button>
+
+          {/* Calendar Dropdown */}
+          {isCalendarOpen && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded shadow-lg z-50 w-[280px]">
             {/* Calendar Header with Navigation */}
             <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
               <button 
@@ -308,13 +317,56 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
               </div>
             </div>
           </div>
+          )}
+        </div>
+
+        {/* Column 2: Forecast Info */}
+        {selectedScenario && (
+          <div className="space-y-2">
+            {/* Forecast Scenario ID */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gs-gray-600">Forecast Scenario ID:</span>
+              <span className="text-sm font-semibold text-gs-blue-600 font-mono">{selectedScenario.scenarioid}</span>
+            </div>
+            
+            {/* Forecast Date Range */}
+            {forecastDateRange && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gs-gray-600">Forecast Date Range:</span>
+                <span className="text-sm font-semibold text-gs-gray-900 font-mono">
+                  {forecastDateRange.start} - {forecastDateRange.end}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Column 3: Historical Info */}
+        {selectedScenario?.hasPreviousWeek && lastWeekScenario && (
+          <div className="space-y-2">
+            {/* Historical Scenario ID */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gs-gray-600">Historical Scenario ID:</span>
+              <span className="text-sm font-semibold text-gs-blue-600 font-mono">{lastWeekScenario.scenarioid}</span>
+            </div>
+            
+            {/* Historical Date Range */}
+            {historicalDateRange && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gs-gray-600">Historical Date Range:</span>
+                <span className="text-sm font-semibold text-gs-gray-900 font-mono">
+                  {historicalDateRange.start} - {historicalDateRange.end}
+                </span>
+              </div>
+            )}
+          </div>
         )}
       </div>
-
-      {/* Click outside to close calendar */}
+      
+      {/* Overlay to close calendar when clicking outside */}
       {isCalendarOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setIsCalendarOpen(false)}
         />
       )}
