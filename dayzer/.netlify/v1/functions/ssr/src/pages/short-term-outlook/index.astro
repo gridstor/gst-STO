@@ -1,0 +1,243 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { SectionHeader } from '../../components/ui/SectionHeader';
+import MECOverviewChart from '../../components/common/MECOverviewChart';
+import TB26Display from '../../components/common/TB26Display';
+import FundamentalsOverview from '../../components/common/FundamentalsOverview';
+import { LocationSelectorWrapper } from '../../components/common/LocationSelectorWrapper';
+
+// Get the correct base URL for API calls
+const getBaseUrl = () => {
+  // If accessed via proxy, use the original site URL
+  if (Astro.url.hostname === 'gridstoranalytics.com') {
+    return 'https://gridstordayzer.netlify.app';
+  }
+  // Otherwise use the current origin
+  return Astro.url.origin;
+};
+
+const baseUrl = getBaseUrl();
+
+// Fetch TB2.6 data dynamically
+let tb26Data;
+try {
+  const response = await fetch(`${baseUrl}/api/tb26-calculation`);
+  if (response.ok) {
+    tb26Data = await response.json();
+  } else {
+    console.error('Failed to fetch TB2.6 data:', response.status);
+    tb26Data = null;
+  }
+} catch (error) {
+  console.error('Error fetching TB2.6 data:', error);
+  tb26Data = null;
+}
+
+// Fetch Weekly Congestion data dynamically
+let weeklyCongestionData;
+try {
+  const response = await fetch(`${baseUrl}/api/weekly-congestion`);
+  if (response.ok) {
+    weeklyCongestionData = await response.json();
+  } else {
+    console.error('Failed to fetch weekly congestion data:', response.status);
+    weeklyCongestionData = null;
+  }
+} catch (error) {
+  console.error('Error fetching weekly congestion data:', error);
+  weeklyCongestionData = null;
+}
+
+// Helper function to format TB2.6 values
+const formatTB26Value = (value: number) => value?.toFixed(2) || 'X.XX';
+
+// Helper function to format congestion values
+const formatCongestionValue = (value: number) => value?.toFixed(2) || '0.00';
+
+// Helper function to get color class based on congestion value
+const getCongestionColorClass = (value: number) => {
+  if (value >= 0) {
+    // Positive values - red scale
+    if (value >= 50) return 'bg-red-700 text-white';
+    if (value >= 30) return 'bg-red-600 text-white';
+    if (value >= 15) return 'bg-red-500 text-white';
+    if (value >= 5) return 'bg-red-400 text-white';
+    if (value >= 1) return 'bg-red-300 text-white';
+    return 'bg-red-100 text-gray-800';
+  } else {
+    // Negative values - blue scale
+    const absValue = Math.abs(value);
+    if (absValue >= 50) return 'bg-blue-700 text-white';
+    if (absValue >= 30) return 'bg-blue-600 text-white';
+    if (absValue >= 15) return 'bg-blue-500 text-white';
+    if (absValue >= 5) return 'bg-blue-400 text-white';
+    if (absValue >= 1) return 'bg-blue-300 text-white';
+    return 'bg-blue-100 text-gray-800';
+  }
+};
+
+// Helper function to format date for display (MM/DD)
+const formatDateDisplay = (dateString: string) => {
+  const date = new Date(dateString);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+};
+
+// Helper function to get date range label
+const getDateRangeLabel = (data: any[]) => {
+  if (!data || data.length === 0) return '';
+  const firstDate = new Date(data[0].date);
+  const lastDate = new Date(data[data.length - 1].date);
+  return `${formatDateDisplay(data[0].date)} - ${formatDateDisplay(data[data.length - 1].date)}`;
+};
+
+// Get current month index (0 = Jan, 11 = Dec)
+const currentMonthIndex = new Date().getMonth();
+const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long' });
+
+// Define sub-navigation for Short Term Outlook
+const subNavLinks: Array<{ label: string; href?: string; dropdown?: Array<{ label: string; href: string; description?: string }> }> = [
+  { 
+    label: 'CAISO Forecast',
+    dropdown: [
+      { label: 'CAISO System', href: '/short-term-outlook/caiso-system', description: 'System-wide fundamentals and forecasts' },
+      { label: 'Goleta', href: '/short-term-outlook/goleta', description: 'Location-specific pricing and congestion analysis' },
+    ]
+  },
+  { label: 'Weekly Insight', href: '/short-term-outlook/weekly-insight' },
+  { label: 'Likeday Tool', href: '/short-term-outlook/likeday' },
+];
+---
+<Layout title="Short Term Outlook" pageTitle="Short Term Outlook" subNavLinks={subNavLinks}>
+  
+  <div class="py-12 space-y-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      {/* Location Selector */}
+      <div class="mb-12 bg-white border-l-4 border-indigo-600 rounded-lg shadow-md p-6">
+        <LocationSelectorWrapper 
+          client:load
+          locations={[
+            { id: 'caiso-goleta', name: 'Goleta', market: 'CAISO' },
+            { id: 'ercot-hidden-lakes', name: 'Hidden Lakes', market: 'ERCOT' }
+          ]}
+          defaultLocation="caiso-goleta"
+        />
+      </div>
+      
+      {/* Coming Soon Message (hidden by default) */}
+      <div id="coming-soon-message" class="hidden mb-12 bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-12">
+        <div class="text-center">
+          <h2 class="text-3xl font-semibold text-gs-gray-900 mb-4">Coming Soon</h2>
+          <p class="text-lg text-gs-gray-600">Data for ERCOT - Hidden Lakes will be available soon.</p>
+        </div>
+      </div>
+      
+      {/* All Data Sections (shown by default for CAISO - Goleta) */}
+      <div id="caiso-goleta-content">
+      
+      {/* TB2.6 Performance Overview Section */}
+      <section class="mb-12">
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold text-gs-gray-900 mb-2">Goleta TB2.6 Performance Overview</h2>
+          <p class="text-gs-gray-600">Based on 60MW/160MWh Battery with 86% Round-Trip Efficiency, Day-Ahead Pricing</p>
+        </div>
+        <TB26Display tb26Data={tb26Data} client:load />
+      </section>
+      
+      {/* Fundamentals Overview Section */}
+      <section class="mb-12">
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold text-gs-gray-900 mb-2">System Fundamentals</h2>
+          <p class="text-gs-gray-600">Fundamentals Comparison of Last Week's Results vs. This Week's Forecast</p>
+        </div>
+        <FundamentalsOverview client:load />
+      </section>
+
+      {/* Congestion Analysis Section */}
+      <section class="mb-12">
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold text-gs-gray-900 mb-2">Weekly Congestion</h2>
+          <p class="text-gs-gray-600">Impactful Constraints During Top 2 and Bottom 2 Hours</p>
+        </div>
+      
+      {weeklyCongestionData ? (
+        <a 
+          href="/short-term-outlook/goleta#weekly-congestion"
+          class="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm hover:shadow-gs-lg transition-shadow duration-gs-base p-6 block cursor-pointer"
+        >
+          <h3 class="text-lg font-semibold text-gs-gray-900 mb-6">
+            This Week
+          </h3>
+          
+          {/* Top 2 Hours Stacked Bar */}
+          <div class="space-y-3 mb-6">
+            <div class="flex justify-between text-sm text-gs-gray-600">
+              <span class="font-medium uppercase tracking-wide">Top 2 Hours</span>
+            </div>
+            
+            <div class="relative">
+              <div class="flex h-12 rounded-lg overflow-hidden shadow-gs-sm border border-gs-gray-200 font-mono">
+                {weeklyCongestionData.thisWeek.map((day: any) => (
+                  <div 
+                    class={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.topHours.avgCongestion)}`}
+                    style="width: 14.3%;" 
+                    title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.topHours.avgCongestion)}/MWh
+Hours: ${day.topHours.hours.join(', ')}
+Constraint: ${day.topHours.constraintName}`}
+                  >
+                    {formatDateDisplay(day.date)}<br/>${formatCongestionValue(day.topHours.avgCongestion)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom 2 Hours Stacked Bar */}
+          <div class="space-y-3">
+            <div class="flex justify-between text-sm text-gs-gray-600">
+              <span class="font-medium uppercase tracking-wide">Bottom 2 Hours</span>
+            </div>
+            
+            <div class="relative">
+              <div class="flex h-12 rounded-lg overflow-hidden shadow-gs-sm border border-gs-gray-200 font-mono">
+                {weeklyCongestionData.thisWeek.map((day: any) => (
+                  <div 
+                    class={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.bottomHours.avgCongestion)}`}
+                    style="width: 14.3%;" 
+                    title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.bottomHours.avgCongestion)}/MWh
+Hours: ${day.bottomHours.hours.join(', ')}
+Constraint: ${day.bottomHours.constraintName}`}
+                  >
+                    {formatDateDisplay(day.date)}<br/>${formatCongestionValue(day.bottomHours.avgCongestion)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </a>
+      ) : (
+        <div class="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
+          <h3 class="text-lg font-semibold text-gs-gray-900 mb-4">This Week</h3>
+          <div class="flex items-center justify-center h-24 text-gs-gray-500">
+            <p>Loading congestion data...</p>
+          </div>
+        </div>
+      )}
+      </section>
+      
+      {/* MEC Overview Section */}
+      <section>
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold text-gs-gray-900 mb-2">Marginal Energy Component</h2>
+          <p class="text-gs-gray-600">Marginal Energy Component for Top 2 and Bottom 2 Hours</p>
+        </div>
+        
+        <MECOverviewChart client:load />
+      </section>
+      
+      </div>
+      {/* End of CAISO - Goleta content */}
+      
+    </div>
+  </div>
+</Layout>

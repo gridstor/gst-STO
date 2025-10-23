@@ -127,7 +127,10 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
 
   const formatXAxisTick = (value: string) => {
     const date = new Date(value);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric'
+    });
   };
 
   if (loading) {

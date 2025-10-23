@@ -124,11 +124,11 @@ export const GET: APIRoute = async ({ request }) => {
         AND local_datetime_ib >= $3 
         AND local_datetime_ib <= $4
       ORDER BY local_datetime_ib ASC
-    `, ['GOLETA_6_N100', 'RTLMP', lastWeekStart.toISOString(), lastWeekEnd.toISOString()]);
+    `, ['GOLETA_6_N100', 'DALMP', lastWeekStart.toISOString(), lastWeekEnd.toISOString()]);
     
     const lastWeekRawData = lastWeekResult.rows;
 
-    // Convert last week's 5-minute data to hourly averages
+    // Convert last week's DALMP data to hourly averages
     const lastWeekHourlyData: { date: Date, hour: number, lmp: number }[] = [];
     
     for (let day = 0; day < 7; day++) {

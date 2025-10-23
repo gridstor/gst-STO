@@ -60,8 +60,8 @@ export default function WeeklyCongestionWrapper() {
 
   if (loading) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-        <div className="text-center text-gray-500">Loading congestion data...</div>
+      <div className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
+        <div className="text-center text-gs-gray-500">Loading congestion data...</div>
       </div>
     );
   }
@@ -71,153 +71,67 @@ export default function WeeklyCongestionWrapper() {
   }
 
   return (
-    <div id="weekly-congestion" className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 scroll-mt-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-2">Weekly Congestion</h2>
-        <div className="flex flex-wrap justify-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-500 rounded"></div>
-            <span className="text-gray-600">Positive Congestion</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-400 rounded"></div>
-            <span className="text-gray-600">Negative Congestion</span>
+    <div id="weekly-congestion" className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6 scroll-mt-6">
+      <h3 className="text-lg font-semibold text-gs-gray-900 mb-6">
+        This Week
+      </h3>
+
+      {/* Top 2 Hours Stacked Bar */}
+      <div className="space-y-3 mb-6">
+        <div className="flex justify-between text-sm text-gs-gray-600">
+          <span className="font-medium uppercase tracking-wide">Top 2 Hours</span>
+        </div>
+        
+        <div className="relative">
+          <div className="flex h-12 rounded-lg overflow-hidden shadow-gs-sm border border-gs-gray-200 font-mono">
+            {congestionData.thisWeek && congestionData.thisWeek.length > 0 ? (
+              congestionData.thisWeek.map((day: any) => (
+                <div
+                  key={day.date}
+                  className={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.topHours.avgCongestion)}`}
+                  style={{ width: '14.3%' }}
+                  title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.topHours.avgCongestion)}/MWh
+Hours: ${day.topHours.hours.join(', ')}
+Constraint: ${day.topHours.constraintName}`}
+                >
+                  {formatDateDisplay(day.date)}<br/>${formatCongestionValue(day.topHours.avgCongestion)}
+                </div>
+              ))
+            ) : (
+              <div className="flex-1 bg-gs-gray-200 flex items-center justify-center text-gs-gray-500 text-sm">
+                No Data
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Last Week Chart */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
-          <h3 className="text-lg font-medium text-gray-700 text-center">Last Week</h3>
-
-          {/* Top 2 Hours Stacked Bar */}
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span className="font-medium">Top 2 Hours</span>
-            </div>
-
-            <div className="relative">
-              <div className="flex h-12 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                {congestionData.lastWeek && congestionData.lastWeek.length > 0 ? (
-                  congestionData.lastWeek.map((day: any) => (
-                    <div
-                      key={day.date}
-                      className={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.topHours.avgCongestion)}`}
-                      style={{ width: `${100 / congestionData.lastWeek.length}%` }}
-                      title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.topHours.avgCongestion)}/MWh - ${day.topHours.constraintName}`}
-                    >
-                      <div className="text-center">
-                        <div>{formatDateDisplay(day.date)}</div>
-                        <div>${formatCongestionValue(day.topHours.avgCongestion)}</div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex-1 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-                    No Data
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom 2 Hours Stacked Bar */}
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span className="font-medium">Bottom 2 Hours</span>
-            </div>
-
-            <div className="relative">
-              <div className="flex h-12 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                {congestionData.lastWeek && congestionData.lastWeek.length > 0 ? (
-                  congestionData.lastWeek.map((day: any) => (
-                    <div
-                      key={day.date}
-                      className={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.bottomHours.avgCongestion)}`}
-                      style={{ width: `${100 / congestionData.lastWeek.length}%` }}
-                      title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.bottomHours.avgCongestion)}/MWh - ${day.bottomHours.constraintName}`}
-                    >
-                      <div className="text-center">
-                        <div>{formatDateDisplay(day.date)}</div>
-                        <div>${formatCongestionValue(day.bottomHours.avgCongestion)}</div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex-1 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-                    No Data
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+      {/* Bottom 2 Hours Stacked Bar */}
+      <div className="space-y-3">
+        <div className="flex justify-between text-sm text-gs-gray-600">
+          <span className="font-medium uppercase tracking-wide">Bottom 2 Hours</span>
         </div>
-
-        {/* This Week Chart */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
-          <h3 className="text-lg font-medium text-gray-700 text-center">This Week</h3>
-
-          {/* Top 2 Hours Stacked Bar */}
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span className="font-medium">Top 2 Hours</span>
-            </div>
-
-            <div className="relative">
-              <div className="flex h-12 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                {congestionData.thisWeek && congestionData.thisWeek.length > 0 ? (
-                  congestionData.thisWeek.map((day: any) => (
-                    <div
-                      key={day.date}
-                      className={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.topHours.avgCongestion)}`}
-                      style={{ width: `${100 / congestionData.thisWeek.length}%` }}
-                      title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.topHours.avgCongestion)}/MWh - ${day.topHours.constraintName}`}
-                    >
-                      <div className="text-center">
-                        <div>{formatDateDisplay(day.date)}</div>
-                        <div>${formatCongestionValue(day.topHours.avgCongestion)}</div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex-1 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-                    No Data
-                  </div>
-                )}
+        
+        <div className="relative">
+          <div className="flex h-12 rounded-lg overflow-hidden shadow-gs-sm border border-gs-gray-200 font-mono">
+            {congestionData.thisWeek && congestionData.thisWeek.length > 0 ? (
+              congestionData.thisWeek.map((day: any) => (
+                <div
+                  key={day.date}
+                  className={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.bottomHours.avgCongestion)}`}
+                  style={{ width: '14.3%' }}
+                  title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.bottomHours.avgCongestion)}/MWh
+Hours: ${day.bottomHours.hours.join(', ')}
+Constraint: ${day.bottomHours.constraintName}`}
+                >
+                  {formatDateDisplay(day.date)}<br/>${formatCongestionValue(day.bottomHours.avgCongestion)}
+                </div>
+              ))
+            ) : (
+              <div className="flex-1 bg-gs-gray-200 flex items-center justify-center text-gs-gray-500 text-sm">
+                No Data
               </div>
-            </div>
-          </div>
-
-          {/* Bottom 2 Hours Stacked Bar */}
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span className="font-medium">Bottom 2 Hours</span>
-            </div>
-
-            <div className="relative">
-              <div className="flex h-12 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                {congestionData.thisWeek && congestionData.thisWeek.length > 0 ? (
-                  congestionData.thisWeek.map((day: any) => (
-                    <div
-                      key={day.date}
-                      className={`flex-1 text-xs flex items-center justify-center border-r border-white ${getCongestionColorClass(day.bottomHours.avgCongestion)}`}
-                      style={{ width: `${100 / congestionData.thisWeek.length}%` }}
-                      title={`${formatDateDisplay(day.date)}: $${formatCongestionValue(day.bottomHours.avgCongestion)}/MWh - ${day.bottomHours.constraintName}`}
-                    >
-                      <div className="text-center">
-                        <div>{formatDateDisplay(day.date)}</div>
-                        <div>${formatCongestionValue(day.bottomHours.avgCongestion)}</div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex-1 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-                    No Data
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

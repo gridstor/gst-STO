@@ -1,15 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  Area,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from 'recharts';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useScenario } from '../../contexts/ScenarioContext';
 
 interface LmpData {
@@ -25,6 +14,14 @@ export default function PricingChart() {
   const [data, setData] = useState<LmpData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [Plot, setPlot] = useState<any>(null);
+
+  // Load Plotly only on client side
+  useEffect(() => {
+    import('react-plotly.js').then((module) => {
+      setPlot(() => module.default);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,137 +50,201 @@ export default function PricingChart() {
     fetchData();
   }, [selectedScenario]);
 
-  // Custom tick formatter for y-axis to show whole numbers
-  const formatYAxisTick = (value: number) => {
-    return Math.round(value).toString();
-  };
+  // Plotly traces configuration
+  const traces: any[] = useMemo(() => {
+    if (!data || data.length === 0) return [];
 
-  // Custom tick formatter to show clean date progression
-  const formatDateTick = (tickItem: string) => {
-    const date = new Date(tickItem);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric'
-    });
-  };
+    return [
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.Energy),
+        name: 'Energy',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        stackgroup: 'one',
+        fillcolor: '#3B82F6',
+        line: {
+          width: 0.5,
+          color: '#3B82F6'
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.Congestion),
+        name: 'Congestion',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        stackgroup: 'one',
+        fillcolor: '#EF4444',
+        line: {
+          width: 0.5,
+          color: '#EF4444'
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.Loss),
+        name: 'Losses',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        stackgroup: 'one',
+        fillcolor: '#F59E0B',
+        line: {
+          width: 0.5,
+          color: '#F59E0B'
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      },
+      {
+        x: data.map(d => d.datetime),
+        y: data.map(d => d.LMP),
+        name: 'Total LMP',
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        line: {
+          color: '#000000',
+          width: 2
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+      }
+    ];
+  }, [data]);
 
-  // Formatter for tooltip to show date and hour
-  const formatTooltipLabel = (label: string) => {
-    const date = new Date(label);
-    return `${date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })} at ${date.toLocaleTimeString('en-US', { 
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true 
-    })}`;
+  // Plotly layout configuration
+  const layout: any = useMemo(() => ({
+    height: 500,
+    margin: { l: 80, r: 40, t: 40, b: 70 },
+    xaxis: {
+      title: { text: '' },
+      tickformat: '%b %d',
+      tickangle: 0,
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      },
+      showspikes: true,
+      spikemode: 'across',
+      spikethickness: 1,
+      spikecolor: '#9CA3AF',
+      spikedash: 'solid',
+      hoverformat: '%b %d, %Y at %I:%M %p'
+    },
+    yaxis: {
+      title: {
+        text: '$/MWh',
+        font: {
+          size: 14,
+          color: '#4B5563',
+          family: 'Inter, sans-serif'
+        }
+      },
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      }
+    },
+    hovermode: 'x unified',
+    hoverlabel: {
+      bgcolor: 'white',
+      bordercolor: '#E5E7EB',
+      font: {
+        family: 'Inter, sans-serif',
+        size: 13
+      },
+      namelength: -1
+    },
+    legend: {
+      orientation: 'h',
+      yanchor: 'bottom',
+      y: 1.02,
+      xanchor: 'left',
+      x: 0,
+      font: {
+        size: 13,
+        family: 'Inter, sans-serif'
+      }
+    },
+    plot_bgcolor: 'white',
+    paper_bgcolor: 'white',
+    font: {
+      family: 'Inter, sans-serif',
+      size: 13,
+      color: '#6B7280'
+    }
+  }), []);
+
+  // Plotly config
+  const config: any = {
+    responsive: true,
+    displayModeBar: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
+    toImageButtonOptions: {
+      format: 'png',
+      filename: 'lmp_breakdown',
+      height: 600,
+      width: 1200,
+      scale: 2
+    }
   };
 
   if (loading) {
     return (
-      <div className="w-full h-96 bg-white rounded-lg shadow-lg p-6 flex items-center justify-center">
-        <div className="text-gray-500">Loading pricing data...</div>
+      <div className="w-full h-96 bg-white rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 p-6 flex items-center justify-center">
+        <div className="text-gs-gray-500">Loading pricing data...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="w-full h-96 bg-white rounded-lg shadow-lg p-6 flex items-center justify-center">
-        <div className="text-red-500">Error: {error}</div>
+      <div className="w-full h-96 bg-white rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 p-6 flex items-center justify-center">
+        <div className="text-gs-red-500">Error: {error}</div>
+      </div>
+    );
+  }
+
+  if (!Plot) {
+    return (
+      <div className="w-full h-96 bg-white rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 p-6 flex items-center justify-center">
+        <div className="text-gs-gray-500">Loading chart...</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-      <h2 className="text-xl font-semibold text-gray-800 mb-6">LMP Breakdown</h2>
-      <div style={{ width: '100%', height: '500px' }}>
-        <ResponsiveContainer>
-          <ComposedChart data={data} margin={{ top: 20, right: 30, left: 30, bottom: 25 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
-            <XAxis 
-              dataKey="datetime" 
-              tickFormatter={formatDateTick}
-              tick={{ fontSize: 11 }}
-              tickLine={false}
-              interval={23}
-              height={50}
-            />
-            <YAxis 
-              label={{ 
-                value: '$/MWh', 
-                angle: -90, 
-                position: 'insideLeft',
-                style: { textAnchor: 'middle' }
-              }}
-              domain={[
-                (dataMin: number) => Math.floor(dataMin / 20) * 20,
-                (dataMax: number) => Math.ceil(dataMax / 20) * 20
-              ]}
-              tickFormatter={formatYAxisTick}
-              ticks={(() => {
-                if (data.length === 0) return [];
-                const allValues = data.flatMap(d => [d.Energy, d.Congestion, d.Loss, d.LMP]);
-                const min = Math.min(...allValues);
-                const max = Math.max(...allValues);
-                const tickMin = Math.floor(min / 20) * 20;
-                const tickMax = Math.ceil(max / 20) * 20;
-                const ticks = [];
-                for (let i = tickMin; i <= tickMax; i += 20) {
-                  ticks.push(i);
-                }
-                return ticks;
-              })()}
-            />
-            <Tooltip 
-              labelFormatter={formatTooltipLabel}
-              formatter={(value, name) => [
-                `$${Number(value).toFixed(2)}/MWh`, 
-                name
-              ]}
-            />
-            <Legend />
-            <Area 
-              type="monotone" 
-              dataKey="Energy" 
-              stackId="1" 
-              stroke="#3B82F6" 
-              fill="#3B82F6" 
-              fillOpacity={0.6}
-              name="Energy" 
-            />
-            <Area 
-              type="monotone" 
-              dataKey="Congestion" 
-              stackId="1" 
-              stroke="#EF4444" 
-              fill="#EF4444" 
-              fillOpacity={0.6}
-              name="Congestion" 
-            />
-            <Area 
-              type="monotone" 
-              dataKey="Loss" 
-              stackId="1" 
-              stroke="#F59E0B" 
-              fill="#F59E0B" 
-              fillOpacity={0.6}
-              name="Losses" 
-            />
-            <Line 
-              type="monotone" 
-              dataKey="LMP" 
-              stroke="#000000" 
-              strokeWidth={2} 
-              dot={false} 
-              name="LMP" 
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="bg-white p-6 rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500">
+      <Plot
+        data={traces}
+        layout={layout}
+        config={config}
+        style={{ width: '100%', height: '100%' }}
+        useResizeHandler={true}
+      />
     </div>
   );
-} 
+}

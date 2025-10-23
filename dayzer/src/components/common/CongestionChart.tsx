@@ -1,15 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  Area,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from 'recharts';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useScenario } from '../../contexts/ScenarioContext';
 
 interface CongestionData {
@@ -37,40 +26,22 @@ interface CongestionResponse {
 
 // Generate distinct colors for constraints
 const generateColors = (count: number): string[] => {
-  // Use a carefully selected palette of highly distinct colors
   const distinctColors = [
-    '#FF6B6B', // Red
-    '#4ECDC4', // Teal
-    '#45B7D1', // Blue
-    '#FFA726', // Orange
-    '#66BB6A', // Green
-    '#AB47BC', // Purple
-    '#FF7043', // Deep Orange
-    '#26A69A', // Cyan
-    '#42A5F5', // Light Blue
-    '#FFCA28', // Amber
-    '#EF5350', // Red variant
-    '#29B6F6', // Light Blue variant
-    '#9CCC65', // Light Green
-    '#EC407A', // Pink
-    '#78909C', // Blue Grey
-    '#FDD835', // Yellow
-    '#8D6E63', // Brown
-    '#D4E157', // Lime
-    '#FF8A65', // Deep Orange variant
-    '#81C784', // Green variant
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA726', '#66BB6A',
+    '#AB47BC', '#FF7043', '#26A69A', '#42A5F5', '#FFCA28',
+    '#EF5350', '#29B6F6', '#9CCC65', '#EC407A', '#78909C',
+    '#FDD835', '#8D6E63', '#D4E157', '#FF8A65', '#81C784',
   ];
   
   if (count <= distinctColors.length) {
     return distinctColors.slice(0, count);
   }
   
-  // If we need more colors, generate additional ones with good separation
   const additionalColors = [];
   for (let i = distinctColors.length; i < count; i++) {
-    const hue = (i * 137.508) % 360; // Golden angle for good distribution
-    const saturation = 70 + (i % 3) * 10; // Vary saturation 70-90%
-    const lightness = 45 + (i % 4) * 10; // Vary lightness 45-75%
+    const hue = (i * 137.508) % 360;
+    const saturation = 70 + (i % 3) * 10;
+    const lightness = 45 + (i % 4) * 10;
     additionalColors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
   }
   
@@ -83,8 +54,16 @@ export default function CongestionChart() {
   const [metadata, setMetadata] = useState<CongestionResponse['metadata'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hoveredData, setHoveredData] = useState<CongestionData | null>(null);
   const [pinnedData, setPinnedData] = useState<CongestionData | null>(null);
+  const [hoveredData, setHoveredData] = useState<CongestionData | null>(null);
+  const [Plot, setPlot] = useState<any>(null);
+
+  // Load Plotly only on client side
+  useEffect(() => {
+    import('react-plotly.js').then((module) => {
+      setPlot(() => module.default);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,207 +93,157 @@ export default function CongestionChart() {
     fetchData();
   }, [selectedScenario]);
 
-  // Custom tick formatter for y-axis to show whole numbers
-  const formatYAxisTick = (value: number) => {
-    return Math.round(value).toString();
-  };
-
-  // Custom tick formatter to show clean date progression
-  const formatDateTick = (tickItem: string) => {
-    const date = new Date(tickItem);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric'
-    });
-  };
-
-  // Formatter for tooltip to show date and hour
-  const formatTooltipLabel = (label: string) => {
-    const date = new Date(label);
-    return `${date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })} at ${date.toLocaleTimeString('en-US', { 
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true 
-    })}`;
-  };
-
-  // Custom tooltip content that filters out zero values
-  const CustomTooltipContent = ({ active, payload, label }: any) => {
-    if (!active || !payload || !payload.length) {
-      return null;
-    }
-
-    // Update hovered data for the table (only if not pinned)
-    if (active && payload[0]?.payload && !pinnedData) {
-      setHoveredData(payload[0].payload);
-    }
-
-    // Filter out zero/near-zero values
-    const nonZeroPayload = payload.filter((entry: any) => {
-      const value = Number(entry.value);
-      return Math.abs(value) >= 0.01;
-    });
-
-    if (nonZeroPayload.length === 0) {
-      return null;
-    }
-
-    // Separate Total Congestion from constraints for sorting
-    const totalCongestionEntry = nonZeroPayload.find((entry: any) => entry.name === 'Total Congestion');
-    const constraintEntries = nonZeroPayload.filter((entry: any) => entry.name !== 'Total Congestion');
-
-    // Sort constraints by value (highest to lowest)
-    const sortedConstraints = constraintEntries.sort((a: any, b: any) => {
-      return Number(b.value) - Number(a.value);
-    });
-
-    // Combine sorted constraints with Total Congestion at the end
-    const sortedPayload = [...sortedConstraints];
-    if (totalCongestionEntry) {
-      sortedPayload.push(totalCongestionEntry);
-    }
-
-    return (
-      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-        <p className="font-semibold text-gray-800 mb-2">
-          {formatTooltipLabel(label)}
-        </p>
-        {sortedPayload.map((entry: any, index: number) => {
-          const value = Number(entry.value);
-          const name = entry.name;
-          
-          if (name === 'Total Congestion') {
-            return (
-              <p key={index} style={{ color: '#000000' }} className="text-sm border-t border-gray-200 pt-1 mt-1">
-                <span className="font-medium">{name}:</span> ${value.toFixed(2)}/MWh
-              </p>
-            );
-          }
-          
-          if (name === 'Other') {
-            return (
-              <p key={index} style={{ color: entry.color }} className="text-sm">
-                <span className="font-medium">{name}:</span> ${value.toFixed(2)}/MWh
-              </p>
-            );
-          }
-          
-          // Find the original constraint name
-          const originalName = displayConstraints.find(constraint => 
-            shortenConstraintName(constraint) === name
-          );
-          
-          // Show constraint details if available
-          const datetime = payload[0]?.payload?.datetime;
-          if (metadata && datetime && originalName && metadata.constraintDetails[originalName] && metadata.constraintDetails[originalName][datetime]) {
-            const details = metadata.constraintDetails[originalName][datetime];
-            return (
-              <p key={index} style={{ color: entry.color }} className="text-sm">
-                <span className="font-medium">{name}:</span> ${value.toFixed(2)}/MWh 
-                <span className="text-gray-600"> (SF: {details.shiftFactor.toFixed(3)}, SP: ${details.shadowprice.toFixed(2)})</span>
-              </p>
-            );
-          }
-          
-          return (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
-              <span className="font-medium">{name}:</span> ${value.toFixed(2)}/MWh
-            </p>
-          );
-        })}
-      </div>
-    );
-  };
-
-  // Handle mouse leave to clear hovered data (only if not pinned)
-  const handleMouseLeave = () => {
-    if (!pinnedData) {
-      setHoveredData(null);
-    }
-  };
-
-  // Handle click to pin/unpin data
-  const handleChartClick = (event: any) => {
-    if (event && event.activePayload && event.activePayload.length > 0) {
-      const clickedData = event.activePayload[0].payload;
-      if (pinnedData && pinnedData.datetime === clickedData.datetime) {
-        // Clicking on the same pinned data - unpin it
-        setPinnedData(null);
-      } else {
-        // Pin the clicked data
-        setPinnedData(clickedData);
-        setHoveredData(null); // Clear hover data when pinning
-      }
-    } else {
-      // Clicked on empty space - unpin
-      setPinnedData(null);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="w-full h-96 bg-white rounded-lg shadow-lg p-6 flex items-center justify-center">
-        <div className="text-gray-500">Loading congestion data...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full h-96 bg-white rounded-lg shadow-lg p-6 flex items-center justify-center">
-        <div className="text-red-500">Error: {error}</div>
-      </div>
-    );
-  }
-
-  if (!metadata) {
-    return (
-      <div className="w-full h-96 bg-white rounded-lg shadow-lg p-6 flex items-center justify-center">
-        <div className="text-gray-500">No congestion data available</div>
-      </div>
-    );
-  }
-
-  // Get all constraint names including "Other" - handle empty case
-  const allConstraints = [...(metadata.constraintNames || []), 'Other'];
-  
-  // Use ALL constraints (no filtering to top 10)
-  const displayConstraints = allConstraints;
-  
   // Function to shorten constraint names
   const shortenConstraintName = (name: string) => {
     if (name === 'Other' || name === 'Total Congestion') return name;
     
-    // Extract meaningful parts of the constraint name
     const parts = name.split('_');
     if (parts.length > 2) {
-      // Take first 2 parts and last part, limit total length
       const shortened = `${parts[0]}_${parts[1]}...${parts[parts.length - 1]}`;
       return shortened.length > 25 ? shortened.substring(0, 25) + '...' : shortened;
     }
     return name.length > 25 ? name.substring(0, 25) + '...' : name;
   };
-  
-  const colors = generateColors(displayConstraints.length);
 
-  // Show message if no meaningful data
-  if (data.length === 0 || displayConstraints.length <= 1) {
-    return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Congestion Analysis</h2>
-        <div className="w-full h-96 flex items-center justify-center">
-          <div className="text-gray-500">No constraint data available for the selected period</div>
-        </div>
-      </div>
-    );
-  }
+  // Get all constraint names
+  const allConstraints = useMemo(() => {
+    if (!metadata) return [];
+    return [...(metadata.constraintNames || []), 'Other'];
+  }, [metadata]);
 
-  // Use original data (no need to recalculate since showing all constraints)
-  const chartData = data;
+  const colors = useMemo(() => generateColors(allConstraints.length), [allConstraints.length]);
+
+  // Plotly traces configuration
+  const traces: any[] = useMemo(() => {
+    if (!data || data.length === 0 || allConstraints.length === 0) return [];
+
+    const traces = [];
+
+    // Add stacked areas for each constraint
+    allConstraints.forEach((constraintName, index) => {
+      traces.push({
+        x: data.map(d => d.datetime),
+        y: data.map(d => Number(d[constraintName]) || 0),
+        name: shortenConstraintName(constraintName),
+        type: 'scatter' as const,
+        mode: 'lines' as const,
+        stackgroup: 'one',
+        fillcolor: colors[index],
+        line: {
+          width: 0.5,
+          color: colors[index]
+        },
+        hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>',
+        customdata: data.map(d => constraintName) // Store original constraint name
+      });
+    });
+
+    // Add Total Congestion as a line overlay
+    traces.push({
+      x: data.map(d => d.datetime),
+      y: data.map(d => d['Total Congestion']),
+      name: 'Total Congestion',
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      line: {
+        color: '#000000',
+        width: 2
+      },
+      hovertemplate: '<b>%{fullData.name}</b><br>$%{y:.2f}/MWh<br><extra></extra>'
+    });
+
+    return traces;
+  }, [data, allConstraints, colors]);
+
+  // Plotly layout configuration
+  const layout: any = useMemo(() => ({
+    height: 500,
+    margin: { l: 80, r: 40, t: 40, b: 70 },
+    xaxis: {
+      title: { text: '' },
+      tickformat: '%b %d',
+      tickangle: 0,
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      },
+      showspikes: true,
+      spikemode: 'across',
+      spikethickness: 1,
+      spikecolor: '#9CA3AF',
+      spikedash: 'solid',
+      hoverformat: '%b %d, %Y at %I:%M %p'
+    },
+    yaxis: {
+      title: {
+        text: '$/MWh',
+        font: {
+          size: 14,
+          color: '#4B5563',
+          family: 'Inter, sans-serif'
+        }
+      },
+      showgrid: true,
+      gridcolor: '#E5E7EB',
+      zeroline: false,
+      showline: true,
+      linecolor: '#6B7280',
+      linewidth: 1,
+      ticks: 'outside',
+      ticklen: 5,
+      tickwidth: 1,
+      tickcolor: '#6B7280',
+      tickfont: {
+        size: 13,
+        family: 'Inter, sans-serif',
+        color: '#6B7280'
+      }
+    },
+    hovermode: 'x unified',
+    hoverlabel: {
+      bgcolor: 'white',
+      bordercolor: '#E5E7EB',
+      font: {
+        family: 'Inter, sans-serif',
+        size: 13
+      },
+      namelength: -1
+    },
+    showlegend: false,
+    plot_bgcolor: 'white',
+    paper_bgcolor: 'white',
+    font: {
+      family: 'Inter, sans-serif',
+      size: 13,
+      color: '#6B7280'
+    }
+  }), []);
+
+  // Plotly config
+  const config: any = {
+    responsive: true,
+    displayModeBar: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
+    toImageButtonOptions: {
+      format: 'png',
+      filename: 'congestion_analysis',
+      height: 600,
+      width: 1200,
+      scale: 2
+    }
+  };
 
   // Prepare table data when hovering or pinned
   const getTableData = () => {
@@ -325,7 +254,7 @@ export default function CongestionChart() {
     const tableRows = [];
     
     // Add constraints with their values
-    for (const constraintName of displayConstraints) {
+    for (const constraintName of allConstraints) {
       const value = Number(activeData[constraintName]) || 0;
       if (Math.abs(value) >= 0.01) {
         const details = metadata.constraintDetails[constraintName]?.[datetime];
@@ -355,91 +284,100 @@ export default function CongestionChart() {
     return tableRows;
   };
 
+  const formatTooltipLabel = (label: string) => {
+    const date = new Date(label);
+    return `${date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    })} at ${date.toLocaleTimeString('en-US', { 
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true 
+    })}`;
+  };
+
+  // Handle Plotly click event
+  const handlePlotClick = (event: any) => {
+    if (event.points && event.points.length > 0) {
+      const pointIndex = event.points[0].pointIndex;
+      const clickedData = data[pointIndex];
+      
+      if (pinnedData && pinnedData.datetime === clickedData.datetime) {
+        setPinnedData(null);
+      } else {
+        setPinnedData(clickedData);
+        setHoveredData(null);
+      }
+    }
+  };
+
+  // Handle Plotly hover event
+  const handlePlotHover = (event: any) => {
+    if (!pinnedData && event.points && event.points.length > 0) {
+      const pointIndex = event.points[0].pointIndex;
+      setHoveredData(data[pointIndex]);
+    }
+  };
+
+  // Handle Plotly unhover event
+  const handlePlotUnhover = () => {
+    if (!pinnedData) {
+      setHoveredData(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="w-full bg-white rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 p-6 flex items-center justify-center" style={{ height: '500px' }}>
+        <div className="text-gs-gray-500">Loading congestion data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full bg-white rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 p-6 flex items-center justify-center" style={{ height: '500px' }}>
+        <div className="text-gs-red-500">Error: {error}</div>
+      </div>
+    );
+  }
+
+  if (!metadata || allConstraints.length === 0) {
+    return (
+      <div className="w-full bg-white rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 p-6 flex items-center justify-center" style={{ height: '500px' }}>
+        <div className="text-gs-gray-500">No congestion data available</div>
+      </div>
+    );
+  }
+
+  if (!Plot) {
+    return (
+      <div className="w-full bg-white rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 p-6 flex items-center justify-center" style={{ height: '500px' }}>
+        <div className="text-gs-gray-500">Loading chart...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-      <h2 className="text-xl font-semibold text-gray-800 mb-6">Congestion Analysis</h2>
-      <div style={{ width: '100%', height: '600px' }}>
-        <ResponsiveContainer>
-          <ComposedChart 
-            data={chartData} 
-            margin={{ top: 20, right: 30, left: 30, bottom: 25 }}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleChartClick}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
-            <XAxis 
-              dataKey="datetime" 
-              tickFormatter={formatDateTick}
-              tick={{ fontSize: 11 }}
-              tickLine={false}
-              interval={23}
-              height={50}
-            />
-            <YAxis 
-              label={{ 
-                value: '$/MWh', 
-                angle: -90, 
-                position: 'insideLeft',
-                style: { textAnchor: 'middle' }
-              }}
-              domain={[
-                (dataMin: number) => Math.floor(dataMin / 10) * 10,
-                (dataMax: number) => Math.ceil(dataMax / 10) * 10
-              ]}
-              tickFormatter={formatYAxisTick}
-              interval={0}
-              ticks={(() => {
-                if (chartData.length === 0) return [];
-                const allValues = chartData.flatMap(d => [
-                  d['Total Congestion'],
-                  ...displayConstraints.map(constraint => Number(d[constraint]) || 0)
-                ]);
-                const min = Math.min(...allValues);
-                const max = Math.max(...allValues);
-                const tickMin = Math.floor(min / 10) * 10;
-                const tickMax = Math.ceil(max / 10) * 10;
-                const ticks = [];
-                for (let i = tickMin; i <= tickMax; i += 10) {
-                  ticks.push(i);
-                }
-                return ticks;
-              })()}
-            />
-            <Tooltip 
-              content={CustomTooltipContent}
-            />
-            
-            {/* Render areas for each constraint */}
-            {displayConstraints.map((constraintName, index) => (
-              <Area
-                key={constraintName}
-                type="monotone"
-                dataKey={constraintName}
-                stackId="1"
-                stroke="none"
-                fill={colors[index]}
-                fillOpacity={0.85}
-                name={shortenConstraintName(constraintName)}
-              />
-            ))}
-            
-            {/* Total congestion line overlay */}
-            <Line 
-              type="monotone" 
-              dataKey="Total Congestion" 
-              stroke="#000000" 
-              strokeWidth={2} 
-              dot={false} 
-              name="Total Congestion" 
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
+    <div className="bg-white p-6 rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 flex flex-col w-full h-full">
+      <div className="flex-1 min-h-0">
+        <Plot
+          data={traces}
+          layout={layout}
+          config={config}
+          style={{ width: '100%', height: '100%' }}
+          useResizeHandler={true}
+          onClick={handlePlotClick}
+          onHover={handlePlotHover}
+          onUnhover={handlePlotUnhover}
+        />
       </div>
       
       {/* Hover Details Table */}
-      <div className="mt-6 border-t pt-6">
+      <div className="mt-6 border-t border-gs-gray-200 pt-6 flex-shrink-0" style={{ height: '320px' }}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-800">
+          <h3 className="text-lg font-medium text-gs-gray-800">
             {pinnedData 
               ? `Constraint Details - ${formatTooltipLabel(pinnedData.datetime)} (Pinned)` 
               : hoveredData 
@@ -456,39 +394,39 @@ export default function CongestionChart() {
             </button>
           )}
         </div>
-        <div className="overflow-x-auto h-80">
-          <table className="min-w-full bg-gray-50 border border-gray-200 rounded-lg">
-            <thead className="bg-gray-100">
+        <div className="overflow-x-auto" style={{ height: 'calc(100% - 60px)' }}>
+          <table className="min-w-full bg-gs-gray-50 border border-gs-gray-200 rounded-lg">
+            <thead className="bg-gs-gray-100">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">Constraint Name</th>
-                <th className="px-4 py-2 text-right text-sm font-medium text-gray-700 border-b">Congestion ($/MWh)</th>
-                <th className="px-4 py-2 text-right text-sm font-medium text-gray-700 border-b">Shift Factor</th>
-                <th className="px-4 py-2 text-right text-sm font-medium text-gray-700 border-b">Shadow Price ($/MWh)</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gs-gray-700 border-b border-gs-gray-300">Constraint Name</th>
+                <th className="px-4 py-2 text-right text-sm font-medium text-gs-gray-700 border-b border-gs-gray-300">Congestion ($/MWh)</th>
+                <th className="px-4 py-2 text-right text-sm font-medium text-gs-gray-700 border-b border-gs-gray-300">Shift Factor</th>
+                <th className="px-4 py-2 text-right text-sm font-medium text-gs-gray-700 border-b border-gs-gray-300">Shadow Price ($/MWh)</th>
               </tr>
             </thead>
             <tbody>
               {(pinnedData || hoveredData) ? (
                 getTableData().map((row, index) => (
-                  <tr key={index} className={`${row.name === 'Total Congestion' ? 'border-t-2 border-gray-400 bg-blue-50' : 'hover:bg-gray-100'}`}>
-                    <td className="px-4 py-2 text-sm text-gray-800 border-b">
+                  <tr key={index} className={`${row.name === 'Total Congestion' ? 'border-t-2 border-gs-gray-400 bg-blue-50' : 'hover:bg-gs-gray-100'}`}>
+                    <td className="px-4 py-2 text-sm text-gs-gray-800 border-b border-gs-gray-200">
                       {row.name}
                     </td>
-                    <td className={`px-4 py-2 text-sm text-right border-b font-mono ${
-                      row.value > 0 ? 'text-green-600' : row.value < 0 ? 'text-red-600' : 'text-gray-800'
+                    <td className={`px-4 py-2 text-sm text-right border-b border-gs-gray-200 font-mono ${
+                      row.value > 0 ? 'text-gs-green-600' : row.value < 0 ? 'text-gs-red-600' : 'text-gs-gray-800'
                     }`}>
                       {row.value >= 0 ? '+' : ''}${row.value.toFixed(2)}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-600 text-right border-b">
+                    <td className="px-4 py-2 text-sm text-gs-gray-600 text-right border-b border-gs-gray-200">
                       {row.shiftFactor !== null ? row.shiftFactor.toFixed(3) : '—'}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-600 text-right border-b">
+                    <td className="px-4 py-2 text-sm text-gs-gray-600 text-right border-b border-gs-gray-200">
                       {row.shadowPrice !== null ? `$${row.shadowPrice.toFixed(2)}` : '—'}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500 text-sm">
+                  <td colSpan={4} className="px-4 py-8 text-center text-gs-gray-500 text-sm">
                     Hover over the chart to view constraint details, or click to pin data for a specific time period
                   </td>
                 </tr>
@@ -499,4 +437,4 @@ export default function CongestionChart() {
       </div>
     </div>
   );
-} 
+}

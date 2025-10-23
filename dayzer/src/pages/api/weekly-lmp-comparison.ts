@@ -27,8 +27,6 @@ export const GET: APIRoute = async ({ request }) => {
       connectionString: process.env.DATABASE_URL_SECONDARY,
       ssl: { rejectUnauthorized: false }
     });
-    
-    console.log('Secondary PostgreSQL connection created');
 
     const url = new URL(request.url);
     const requestedScenarioid = url.searchParams.get('scenarioid');
@@ -95,11 +93,6 @@ export const GET: APIRoute = async ({ request }) => {
     lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
     lastWeekEnd.setHours(23, 59, 59, 999); // Set to end of day instead of beginning
 
-    console.log('Date ranges:', {
-      simulation: simulationDate.toISOString(),
-      thisWeek: `${thisWeekStart.toISOString()} to ${thisWeekEnd.toISOString()}`,
-      lastWeek: `${lastWeekStart.toISOString()} to ${lastWeekEnd.toISOString()}`
-    });
 
     // Query this week's LMP from primary database (Unit 66038)
     const thisWeekData = await prisma.results_units.findMany({
@@ -125,20 +118,6 @@ export const GET: APIRoute = async ({ request }) => {
     // Query last week's LMP from secondary database using direct SQL
     let lastWeekData: any[] = [];
     try {
-      // First, check what entities and attributes are available
-      const entitiesResult = await secondaryPool.query(`
-        SELECT DISTINCT entity FROM yes_fundamentals LIMIT 20
-      `);
-      const entities = entitiesResult.rows.map(row => row.entity);
-      console.log('Available entities:', entities);
-
-      const attributesResult = await secondaryPool.query(`
-        SELECT DISTINCT attribute FROM yes_fundamentals LIMIT 20
-      `);
-      const attributes = attributesResult.rows.map(row => row.attribute);
-      console.log('Available attributes:', attributes);
-
-      // Try the actual query with correct attribute and entity
       const lastWeekResult = await secondaryPool.query(`
         SELECT local_datetime_ib, value 
         FROM yes_fundamentals 
@@ -147,25 +126,14 @@ export const GET: APIRoute = async ({ request }) => {
           AND local_datetime_ib >= $3 
           AND local_datetime_ib <= $4
         ORDER BY local_datetime_ib ASC
-      `, ['GOLETA_6_N100', 'RTLMP', lastWeekStart.toISOString(), lastWeekEnd.toISOString()]);
+      `, ['GOLETA_6_N100', 'DALMP', lastWeekStart.toISOString(), lastWeekEnd.toISOString()]);
       
       lastWeekData = lastWeekResult.rows;
-      
-      console.log('Last week query result count:', lastWeekData.length);
-      if (lastWeekData.length > 0) {
-        console.log('First last week record:', lastWeekData[0]);
-        console.log('Last last week record:', lastWeekData[lastWeekData.length - 1]);
-      }
     } catch (queryError) {
       console.error('Failed to query secondary database:', queryError);
       lastWeekData = [];
     }
 
-    console.log('Query results:', {
-      thisWeekRecords: thisWeekData.length,
-      lastWeekRecords: lastWeekData.length,
-      secondaryDBAvailable: !!secondaryPool
-    });
 
     // Create combined hourly data
     const combinedData: LMPDataPoint[] = [];
@@ -192,13 +160,13 @@ export const GET: APIRoute = async ({ request }) => {
         const lastWeekDateTime = new Date(currentDate);
         lastWeekDateTime.setDate(lastWeekDateTime.getDate() - 7);
         
-        // For interval ending data, we need the hour window (e.g., 13:00-14:00 for HE 14:00)
+        // For DALMP (Day-Ahead), data is typically hourly at the hour mark
         const hourStart = new Date(lastWeekDateTime);
         hourStart.setHours(hourStart.getHours() - 1, 0, 0, 0); // Start of the hour
         const hourEnd = new Date(lastWeekDateTime);
         hourEnd.setHours(hourEnd.getHours(), 0, 0, 0); // End of the hour
         
-        // Find all 5-minute records within this hour and calculate average
+        // Find hourly DALMP records within this hour window
         const hourlyRecords = lastWeekData.filter(d => {
           const dataDate = new Date(d.local_datetime_ib);
           return dataDate >= hourStart && dataDate < hourEnd;
@@ -209,7 +177,7 @@ export const GET: APIRoute = async ({ request }) => {
           const validRecords = hourlyRecords.filter(r => r.value !== null && !isNaN(Number(r.value)));
           if (validRecords.length > 0) {
             const sum = validRecords.reduce((acc, r) => acc + Number(r.value), 0);
-            lastWeekLMP = sum / validRecords.length; // Average of 5-minute intervals
+            lastWeekLMP = sum / validRecords.length; // Average if multiple records (typically just one for DALMP)
           }
         }
         

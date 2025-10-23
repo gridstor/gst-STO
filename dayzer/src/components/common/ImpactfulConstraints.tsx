@@ -286,15 +286,15 @@ export default function ImpactfulConstraints() {
 
   if (loading) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200 h-full flex items-center justify-center">
-        <div className="text-gray-500 text-sm">Loading constraints...</div>
+      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 h-full flex items-center justify-center">
+        <div className="text-gs-gray-500 text-sm">Loading constraints...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200 h-full flex items-center justify-center">
+      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 h-full flex items-center justify-center">
         <div className="text-red-500 text-sm">Error: {error}</div>
       </div>
     );
@@ -302,19 +302,15 @@ export default function ImpactfulConstraints() {
 
   if (constraints.length === 0 && appliedHours.length > 0) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200 h-full flex items-center justify-center">
-        <div className="text-gray-500 text-sm">No constraint data available</div>
+      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 h-full flex items-center justify-center">
+        <div className="text-gs-gray-500 text-sm">No constraint data available</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-      <h3 className="text-xl font-semibold text-gray-800 mb-6">Impactful Constraints</h3>
-      
-      <div className="text-xs text-gray-600 mb-3">
-        <div>Defined as having the most influence on Goleta LMP when binding</div>
-      </div>
+    <div className="bg-white p-6 rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500 w-full h-full flex flex-col">
+      <h3 className="text-xl font-semibold text-gs-gray-900 mb-6">Impactful Constraints</h3>
 
       {/* Hour Filter Dropdown */}
       <div className="mb-4 flex-shrink-0">
@@ -327,9 +323,9 @@ export default function ImpactfulConstraints() {
                 setPendingHours([...appliedHours]);
               }
             }}
-            className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-left text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full bg-white border border-gs-gray-300 rounded-md px-3 py-2 text-left text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <span className="text-gray-700">
+            <span className="text-gs-gray-700">
               {appliedHours.length === 24 
                 ? 'All Hours' 
                 : appliedHours.length === 0 
@@ -347,8 +343,8 @@ export default function ImpactfulConstraints() {
           </button>
           
           {isDropdownOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-              <div className="p-2 border-b border-gray-200">
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gs-gray-300 rounded-md shadow-gs-sm max-h-60 overflow-y-auto">
+              <div className="p-2 border-b border-gs-gray-200">
                 <button
                   onClick={handleSelectAllHours}
                   className="text-xs text-blue-600 hover:text-blue-800 mr-4"
@@ -369,14 +365,14 @@ export default function ImpactfulConstraints() {
                       type="checkbox"
                       checked={pendingHours.includes(hour)}
                       onChange={() => handleHourToggle(hour)}
-                      className="h-3 w-3 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      className="h-3 w-3 text-blue-600 rounded border-gs-gray-300 focus:ring-blue-500"
                     />
-                    <span className="text-gray-700">HE{hour}</span>
+                    <span className="text-gs-gray-700">HE{hour}</span>
                   </label>
                 ))}
               </div>
               {hasPendingChanges && (
-                <div className="p-2 border-t border-gray-200">
+                <div className="p-2 border-t border-gs-gray-200">
                   <button
                     onClick={handleApplyHours}
                     className="w-full bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 text-sm font-medium"
@@ -390,26 +386,26 @@ export default function ImpactfulConstraints() {
         </div>
       </div>
       
-      {/* Main Constraints Table - Adjusted height to account for extra elements */}
-      <div style={{ height: '520px' }} className="mb-6 flex flex-col">
+      {/* Main Constraints Table */}
+      <div className="flex-1 min-h-0 mb-6 flex flex-col">
         {appliedHours.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
+          <div className="flex-1 flex items-center justify-center text-gs-gray-500 text-sm">
             Please select at least one hour to view constraint analysis
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto">
             <table className="w-full text-xs">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-2 font-medium text-gray-700">Constraint Name</th>
-                  <th className="text-right py-2 px-2 font-medium text-gray-700">Avg Congestion ($/MWh)</th>
-                  <th className="text-right py-2 px-2 font-medium text-gray-700">Hours</th>
+              <thead className="bg-gs-gray-50 sticky top-0">
+                <tr className="border-b border-gs-gray-200">
+                  <th className="text-left py-2 px-2 font-medium text-gs-gray-700">Constraint Name</th>
+                  <th className="text-right py-2 px-2 font-medium text-gs-gray-700">Avg Congestion ($/MWh)</th>
+                  <th className="text-right py-2 px-2 font-medium text-gs-gray-700">Hours</th>
                 </tr>
               </thead>
               <tbody>
                 {constraints.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="text-center py-8 text-gray-500 text-sm">
+                    <td colSpan={3} className="text-center py-8 text-gs-gray-500 text-sm">
                       No constraint data available for selected hours
                     </td>
                   </tr>
@@ -420,12 +416,12 @@ export default function ImpactfulConstraints() {
                       className={
                         selectedConstraint === constraint.name 
                           ? 'bg-blue-50' 
-                          : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                          : index % 2 === 0 ? 'bg-white' : 'bg-gs-gray-50'
                       }
                     >
                       <td 
                         className={`py-2 px-2 font-medium cursor-pointer hover:bg-blue-100 ${
-                          selectedConstraint === constraint.name ? 'text-blue-600' : 'text-gray-800'
+                          selectedConstraint === constraint.name ? 'text-blue-600' : 'text-gs-gray-800'
                         }`}
                         title={constraint.name} // Show full name on hover
                         onClick={() => handleConstraintClick(constraint.name)}
@@ -437,11 +433,11 @@ export default function ImpactfulConstraints() {
                           ? 'text-green-600' // Positive = green
                           : constraint.averageCongestionCost < 0 
                           ? 'text-red-600' // Negative = red
-                          : 'text-gray-800' // Zero = gray
+                          : 'text-gs-gray-800' // Zero = gray
                       }`}>
                         {constraint.averageCongestionCost >= 0 ? '+' : ''}{constraint.averageCongestionCost.toFixed(2)}
                       </td>
-                      <td className="py-2 px-2 text-right text-gray-800 font-mono">
+                      <td className="py-2 px-2 text-right text-gs-gray-800 font-mono">
                         {constraint.bindingHours}
                       </td>
                     </tr>
@@ -454,48 +450,48 @@ export default function ImpactfulConstraints() {
       </div>
 
       {/* Detailed Table - Match congestion analysis height */}
-      <div className="border-t pt-6">
-        <h4 className="text-lg font-medium text-gray-800 mb-4">Constraint Details</h4>
+      <div className="border-t border-gs-gray-200 pt-6 flex-shrink-0" style={{ height: '320px' }}>
+        <h4 className="text-lg font-medium text-gs-gray-800 mb-4">Constraint Details</h4>
         
-        <div className="overflow-x-auto h-80">
-          <table className="min-w-full bg-gray-50 border border-gray-200 rounded-lg">
-            <thead className="bg-gray-100">
+        <div className="overflow-x-auto" style={{ height: 'calc(100% - 40px)' }}>
+          <table className="min-w-full bg-gs-gray-50 border border-gs-gray-200 rounded-lg">
+            <thead className="bg-gs-gray-100">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">Datetime</th>
-                <th className="px-4 py-2 text-right text-sm font-medium text-gray-700 border-b">Congestion ($/MWh)</th>
-                <th className="px-4 py-2 text-right text-sm font-medium text-gray-700 border-b">Shift Factor</th>
-                <th className="px-4 py-2 text-right text-sm font-medium text-gray-700 border-b">Shadow Price ($/MWh)</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gs-gray-700 border-b">Datetime</th>
+                <th className="px-4 py-2 text-right text-sm font-medium text-gs-gray-700 border-b">Congestion ($/MWh)</th>
+                <th className="px-4 py-2 text-right text-sm font-medium text-gs-gray-700 border-b">Shift Factor</th>
+                <th className="px-4 py-2 text-right text-sm font-medium text-gs-gray-700 border-b">Shadow Price ($/MWh)</th>
               </tr>
             </thead>
             <tbody>
               {appliedHours.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500 text-sm">
+                  <td colSpan={4} className="px-4 py-8 text-center text-gs-gray-500 text-sm">
                     Please select at least one hour to view constraint details
                   </td>
                 </tr>
               ) : !selectedConstraint ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500 text-sm">
+                  <td colSpan={4} className="px-4 py-8 text-center text-gs-gray-500 text-sm">
                     Click on a constraint name above to view detailed information
                   </td>
                 </tr>
               ) : detailsLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500 text-sm">
+                  <td colSpan={4} className="px-4 py-8 text-center text-gs-gray-500 text-sm">
                     Loading constraint details...
                   </td>
                 </tr>
               ) : constraintDetails.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500 text-sm">
+                  <td colSpan={4} className="px-4 py-8 text-center text-gs-gray-500 text-sm">
                     No binding hours found for this constraint in selected hours
                   </td>
                 </tr>
               ) : (
                 constraintDetails.map((detail, index) => (
-                  <tr key={detail.datetime} className="hover:bg-gray-100">
-                    <td className="px-4 py-2 text-sm text-gray-800 border-b">
+                  <tr key={detail.datetime} className="hover:bg-gs-gray-100">
+                    <td className="px-4 py-2 text-sm text-gs-gray-800 border-b">
                       {formatDateTime(detail.datetime)}
                     </td>
                     <td className={`px-4 py-2 text-sm text-right border-b font-mono ${
