@@ -1,14 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import React, { useState, useEffect, useMemo } from 'react';
 import CalendarPicker from './CalendarPicker';
 
 interface LikedayAnalysisProps {}
@@ -76,16 +66,16 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
   const [secondaryVariable, setSecondaryVariable] = useState<string>('');
   const [secondaryData, setSecondaryData] = useState<any>(null);
   const [secondaryLoading, setSecondaryLoading] = useState(false);
-  
-  // Line visibility state for primary chart
-  const [visibleLines, setVisibleLines] = useState<{[key: string]: boolean}>({
-    reference: true,
-  });
-  
-  // Line visibility state for secondary chart
-  const [secondaryVisibleLines, setSecondaryVisibleLines] = useState<{[key: string]: boolean}>({
-    reference: true,
-  });
+
+  // Plotly component state
+  const [Plot, setPlot] = useState<any>(null);
+
+  // Load Plotly only on client side
+  useEffect(() => {
+    import('react-plotly.js').then((module) => {
+      setPlot(() => module.default);
+    });
+  }, []);
 
   // All available variables
   const allVariables = [
@@ -291,14 +281,6 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
       
       setProgress('Generating visualizations...');
       setResults(data);
-      
-      // Initialize visible lines state with all lines visible
-      const initialVisibleLines: {[key: string]: boolean} = { reference: true };
-      data.similarityScores.forEach((score: SimilarityScore) => {
-        initialVisibleLines[score.day] = true;
-      });
-      setVisibleLines(initialVisibleLines);
-      
       setProgress('');
       
     } catch (err) {
@@ -356,14 +338,6 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
       }
       
       setSecondaryData(data);
-      
-      // Initialize secondary visible lines state with all lines visible
-      const initialSecondaryVisibleLines: {[key: string]: boolean} = { reference: true };
-      results?.similarityScores.forEach((score: SimilarityScore) => {
-        initialSecondaryVisibleLines[score.day] = true;
-      });
-      setSecondaryVisibleLines(initialSecondaryVisibleLines);
-      
       setProgress('');
       
     } catch (err) {
@@ -635,25 +609,25 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-12">
       {/* Controls Section */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Likeday Parameters</h2>
+      <div className="bg-white p-6 rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500">
+        <h2 className="text-2xl font-semibold text-gs-gray-900 mb-6">Analysis Parameters</h2>
         
         <div className="space-y-6">
           {/* Reference Mode Toggle - Full Width */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gs-gray-700 mb-2">
               Reference Mode
             </label>
-            <div className="flex items-center space-x-3">
-              <span className={`text-sm font-medium ${referenceMode === 'historical' ? 'text-gray-900' : 'text-gray-500'}`}>
+            <div className="inline-flex items-center space-x-3 bg-gs-gray-50 border border-gs-gray-300 rounded-lg px-4 py-3">
+              <span className={`text-sm font-medium ${referenceMode === 'historical' ? 'text-gs-gray-900' : 'text-gs-gray-500'}`}>
                 Historical
               </span>
               <button
                 onClick={() => handleModeToggle(referenceMode === 'historical' ? 'forecast' : 'historical')}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  referenceMode === 'forecast' ? 'bg-blue-600' : 'bg-gray-300'
+                className={`relative inline-flex h-6 w-11 items-center rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gs-blue-500 focus:ring-offset-2 ${
+                  referenceMode === 'forecast' ? 'bg-gs-blue-500' : 'bg-gs-gray-400'
                 }`}
               >
                 <span
@@ -662,7 +636,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                   }`}
                 />
               </button>
-              <span className={`text-sm font-medium ${referenceMode === 'forecast' ? 'text-gray-900' : 'text-gray-500'}`}>
+              <span className={`text-sm font-medium ${referenceMode === 'forecast' ? 'text-gs-gray-900' : 'text-gs-gray-500'}`}>
                 Forecast
               </span>
             </div>
@@ -673,37 +647,37 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
             <div className="relative">
               {scenarioLoading ? (
                 <div className="flex justify-center py-4">
-                  <div className="text-sm text-gray-500">Loading scenarios...</div>
+                  <div className="text-sm text-gs-gray-500">Loading scenarios...</div>
                 </div>
               ) : availableScenarios.length === 0 ? (
                 <div className="flex justify-center py-4">
-                  <div className="text-sm text-red-500">No scenarios available</div>
+                  <div className="text-sm text-gs-red-500">No scenarios available</div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Scenario ID - Read Only */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gs-gray-700 mb-2">
                       Scenario ID
                     </label>
-                    <div className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-gray-900 font-medium">
+                    <div className="w-full border border-gs-gray-300 rounded-lg px-3 py-2 bg-gs-gray-50 text-gs-gray-900 font-medium font-mono">
                       {selectedScenario?.scenarioid || '--'}
                     </div>
                   </div>
 
                   {/* Simulation Date - Calendar Picker */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gs-gray-700 mb-2">
                       Simulation Date
                     </label>
                     <button
                       onClick={() => setShowCalendar(!showCalendar)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-left bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between"
+                      className="w-full border border-gs-gray-300 rounded-lg px-3 py-2 text-left bg-white hover:bg-gs-gray-50 focus:ring-2 focus:ring-gs-blue-500 focus:border-gs-blue-500 flex items-center justify-between transition-colors"
                     >
                       <span>
                         {selectedScenario ? formatDisplayDate(selectedScenario.simulation_date) : 'Select Date'}
                       </span>
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-gs-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </button>
@@ -723,13 +697,13 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
 
                   {/* Forecast Reference Date - Keep existing dropdown */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gs-gray-700 mb-2">
                       Forecast Reference Date
                     </label>
                     <select
                       value={referenceDate}
                       onChange={(e) => setReferenceDate(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full border border-gs-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gs-blue-500 focus:border-gs-blue-500 transition-colors"
                       disabled={!selectedScenario || availableDates.length === 0}
                     >
                       {availableDates.length === 0 ? (
@@ -765,7 +739,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
             {/* Reference Date (Historical Mode Only) */}
             {referenceMode === 'historical' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gs-gray-700 mb-2">
                   Reference Date
                 </label>
                 <input
@@ -773,27 +747,27 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                   value={referenceDate}
                   onChange={(e) => setReferenceDate(e.target.value)}
                   max={new Date(Date.now() - 86400000).toISOString().split('T')[0]} // Yesterday
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gs-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gs-blue-500 focus:border-gs-blue-500 transition-colors"
                 />
               </div>
             )}
 
             {/* Historical Start Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gs-gray-700 mb-2">
                 Historical Start Date
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gs-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gs-blue-500 focus:border-gs-blue-500 transition-colors"
               />
             </div>
 
             {/* Historical End Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gs-gray-700 mb-2">
                 Historical End Date
               </label>
               <input
@@ -801,7 +775,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 max={new Date().toISOString().split('T')[0]} // Today
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gs-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gs-blue-500 focus:border-gs-blue-500 transition-colors"
               />
             </div>
           </div>
@@ -809,13 +783,13 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Match Variable */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gs-gray-700 mb-2">
                 Match Variable
               </label>
               <select
                 value={matchVariable}
                 onChange={(e) => setMatchVariable(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gs-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gs-blue-500 focus:border-gs-blue-500 transition-colors"
               >
                 {matchVariableOptions.map(option => (
                   <option key={option} value={option}>{option}</option>
@@ -825,7 +799,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
 
             {/* Top N */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gs-gray-700 mb-2">
                 Top N Similar Days
               </label>
               <input
@@ -834,14 +808,14 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                 onChange={(e) => setTopN(parseInt(e.target.value))}
                 min="1"
                 max="20"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gs-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gs-blue-500 focus:border-gs-blue-500 font-mono transition-colors"
               />
             </div>
 
             {/* Euclidean Weight */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Euclidean Weight: {euclideanWeight.toFixed(2)}
+              <label className="block text-sm font-medium text-gs-gray-700 mb-2">
+                Euclidean Weight: <span className="font-mono">{euclideanWeight.toFixed(2)}</span>
               </label>
               <input
                 type="range"
@@ -852,7 +826,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                 onChange={(e) => setEuclideanWeight(parseFloat(e.target.value))}
                 className="w-full"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-gs-gray-500 mt-1">
                 <span>Shape</span>
                 <span>Magnitude</span>
               </div>
@@ -865,7 +839,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
           <button
             onClick={handleAnalysis}
             disabled={loading || (referenceMode === 'forecast' && !selectedScenario)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+            className="bg-gs-blue-500 text-white px-6 py-3 rounded-lg hover:bg-gs-blue-600 disabled:bg-gs-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
           >
             {loading ? 'Analyzing...' : 'Run Likeday Analysis'}
           </button>
@@ -873,14 +847,14 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
 
         {/* Progress */}
         {progress && (
-          <div className="mt-4 text-sm text-blue-600">
+          <div className="mt-4 text-sm text-gs-blue-500 font-medium">
             {progress}
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div className="mt-4 text-sm text-red-600">
+          <div className="mt-4 text-sm text-gs-red-500 font-medium">
             Error: {error}
           </div>
         )}
@@ -888,42 +862,42 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
 
       {/* Debug Information */}
       {debugInfo && (
-        <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Debug Information</h3>
+        <div className="bg-gs-amber-50 p-6 rounded-lg border-l-4 border-gs-amber-500 shadow-gs-sm">
+          <h3 className="text-xl font-semibold text-gs-gray-900 mb-4">Debug Information</h3>
           
           <div className="space-y-4 text-sm">
             <div>
-              <strong>Requested URL:</strong>
-              <div className="font-mono text-xs bg-gray-100 p-2 rounded mt-1 break-all">
+              <strong className="text-gs-gray-700">Requested URL:</strong>
+              <div className="font-mono text-xs bg-gs-gray-50 p-2 rounded-lg mt-1 break-all border border-gs-gray-200">
                 {debugInfo.requestedUrl}
               </div>
             </div>
             
             <div>
-              <strong>Date Range:</strong> {debugInfo.requestedDateRange}
+              <strong className="text-gs-gray-700">Date Range:</strong> <span className="font-mono">{debugInfo.requestedDateRange}</span>
             </div>
             
             <div>
-              <strong>Total Records:</strong> {debugInfo.totalRecords}
+              <strong className="text-gs-gray-700">Total Records:</strong> <span className="font-mono">{debugInfo.totalRecords}</span>
             </div>
             
             <div>
-              <strong>Unique Days Found:</strong> {debugInfo.uniqueDays.length}
-              <div className="mt-2 max-h-32 overflow-y-auto bg-gray-100 p-2 rounded">
+              <strong className="text-gs-gray-700">Unique Days Found:</strong> <span className="font-mono">{debugInfo.uniqueDays.length}</span>
+              <div className="mt-2 max-h-32 overflow-y-auto bg-gs-gray-50 p-2 rounded-lg border border-gs-gray-200 font-mono text-xs">
                 {debugInfo.uniqueDays.join(', ')}
               </div>
             </div>
             
             <div>
-              <strong>Sample Data:</strong>
-              <pre className="mt-2 max-h-40 overflow-y-auto bg-gray-100 p-2 rounded text-xs">
+              <strong className="text-gs-gray-700">Sample Data:</strong>
+              <pre className="mt-2 max-h-40 overflow-y-auto bg-gs-gray-50 p-2 rounded-lg text-xs font-mono border border-gs-gray-200">
                 {JSON.stringify(debugInfo.sampleData, null, 2)}
               </pre>
             </div>
             
             <div>
-              <strong>Date Format Examples:</strong>
-              <pre className="mt-2 bg-gray-100 p-2 rounded text-xs">
+              <strong className="text-gs-gray-700">Date Format Examples:</strong>
+              <pre className="mt-2 bg-gs-gray-50 p-2 rounded-lg text-xs font-mono border border-gs-gray-200">
                 {JSON.stringify(debugInfo.dateTimeFormat, null, 2)}
               </pre>
             </div>
@@ -932,49 +906,51 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
       )}
 
       {/* Similarity Scores Table - Always Visible */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Similarity Scores
-        </h3>
+      <section>
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Similarity Scores</h2>
+          <p className="text-gs-gray-600">Ranked by combined similarity score</p>
+        </div>
         
+        <div className="bg-white p-6 rounded-lg shadow-gs-sm border-l-4 border-gs-purple-500">
         {results ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gs-gray-200">
+                <thead className="bg-gs-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gs-gray-700 uppercase tracking-wider">
                     Rank
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gs-gray-700 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gs-gray-700 uppercase tracking-wider">
                     Euclidean Distance
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gs-gray-700 uppercase tracking-wider">
                     Cosine Distance
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gs-gray-700 uppercase tracking-wider">
                     Combined Score
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-gs-gray-200">
                 {results.similarityScores.map((score: any, index: number) => (
-                  <tr key={score.day} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {score.rank}
+                    <tr key={score.day} className={index % 2 === 0 ? 'bg-white' : 'bg-gs-gray-50'}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gs-gray-900 font-mono">
+                        #{score.rank}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gs-gray-900">
                       {formatDate(score.day)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gs-gray-900 font-mono">
                       {score.euclidean.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gs-gray-900 font-mono">
                       {score.cosine.toFixed(4)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gs-gray-900 font-mono">
                       {score.combined_score.toFixed(4)}
                     </td>
                   </tr>
@@ -983,30 +959,35 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
             </table>
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-gs-gray-500">
             <div className="mb-4">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="mx-auto h-12 w-12 text-gs-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <p className="text-lg font-medium text-gray-900">Run Analysis to See Results</p>
-            <p className="mt-2">Similarity scores for the most similar historical days will appear here.</p>
+              <p className="text-lg font-medium text-gs-gray-900">Run Analysis to See Results</p>
+              <p className="mt-2 text-gs-gray-600">Similarity scores for the most similar historical days will appear here.</p>
           </div>
         )}
       </div>
+      </section>
 
       {/* Comparison Chart - Always Visible */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <section>
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">
           {results ? results.matchVariable : 'Variable Comparison'}
-        </h3>
+          </h2>
+          <p className="text-gs-gray-600">Reference date vs similar historical days</p>
+        </div>
         
+        <div className="bg-white p-6 rounded-lg shadow-gs-sm border-l-4 border-gs-blue-500">
         {results ? (
           (() => {
             const chartData = processChartDataForVariable(results.matchVariable);
             if (chartData.length === 0) {
               return (
-                <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gs-gray-500">
                   No chart data available for the selected parameters.
                 </div>
               );
@@ -1031,144 +1012,137 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
 
             const blueColors = generateBlueGradient(results.topN);
             const yAxisLabel = getVariableUnit(results.matchVariable);
-            
-            // Toggle line visibility
-            const toggleLine = (lineKey: string) => {
-              setVisibleLines(prev => ({
-                ...prev,
-                [lineKey]: !prev[lineKey]
-              }));
+
+            // Generate Plotly traces
+            const traces: any[] = [];
+
+            // Reference line (red)
+            traces.push({
+              x: chartData.map(d => d.hour),
+              y: chartData.map(d => d[`reference_${results.matchVariable.replace(/\s+/g, '_')}`]),
+              name: `Reference (${formatDate(results.referenceDate)})`,
+              type: 'scatter',
+              mode: 'lines',
+              line: {
+                color: '#EF4444',
+                width: 3
+              },
+              hovertemplate: `<b>Reference (${formatDate(results.referenceDate)})</b><br>Hour %{x}<br>%{y:.2f} ${yAxisLabel}<extra></extra>`
+            });
+
+            // Similar days lines (blue gradient)
+            results.similarityScores.slice(0, topN).forEach((score: any, index: number) => {
+              traces.push({
+                x: chartData.map(d => d.hour),
+                y: chartData.map(d => d[`${score.day}_${results.matchVariable.replace(/\s+/g, '_')}`]),
+                name: `#${score.rank} (${formatDate(score.day)})`,
+                type: 'scatter',
+                mode: 'lines',
+                line: {
+                  color: blueColors[index],
+                  width: 2
+                },
+                hovertemplate: `<b>#${score.rank} (${formatDate(score.day)})</b><br>Hour %{x}<br>%{y:.2f} ${yAxisLabel}<extra></extra>`
+              });
+            });
+
+            // Plotly layout
+            const layout = {
+              height: 400,
+              margin: { l: 80, r: 40, t: 20, b: 60 },
+              xaxis: {
+                title: { text: 'Hour', font: { size: 14, family: 'Inter, sans-serif', color: '#374151' } },
+                tickmode: 'array',
+                tickvals: [1, 4, 8, 12, 16, 20, 24],
+                showgrid: true,
+                gridcolor: '#E5E7EB',
+                zeroline: false,
+                showline: true,
+                linecolor: '#6B7280',
+                linewidth: 1
+              },
+              yaxis: {
+                title: { text: yAxisLabel, font: { size: 14, family: 'Inter, sans-serif', color: '#374151' } },
+                showgrid: true,
+                gridcolor: '#E5E7EB',
+                zeroline: true,
+                zerolinecolor: '#9CA3AF',
+                showline: true,
+                linecolor: '#6B7280',
+                linewidth: 1
+              },
+              hovermode: 'x unified',
+              legend: {
+                orientation: 'h',
+                yanchor: 'top',
+                y: -0.2,
+                xanchor: 'center',
+                x: 0.5,
+                font: { size: 11, family: 'Inter, sans-serif' }
+              },
+              showlegend: true,
+              plot_bgcolor: 'white',
+              paper_bgcolor: 'white'
             };
 
-            // Custom tooltip formatter
-            const formatTooltip = (value: number, name: string) => {
-              if (name === 'Reference') {
-                return [`${value?.toFixed(2)} ${yAxisLabel}`, `Reference (${formatDate(results.referenceDate)})`];
-              } else if (name.startsWith('Day ')) {
-                const index = parseInt(name.split(' ')[1]) - 1;
-                const similarDay = results.similarityScores[index];
-                return [`${value?.toFixed(2)} ${yAxisLabel}`, `${similarDay.rank} (${formatDate(similarDay.day)})`];
+            const config = {
+              responsive: true,
+              displayModeBar: true,
+              displaylogo: false,
+              modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d', 'autoScale2d'],
+              toImageButtonOptions: {
+                format: 'png',
+                filename: `likeday_${results.matchVariable.replace(/\s+/g, '_')}`,
+                height: 600,
+                width: 1200,
+                scale: 2
               }
-              return [`${value?.toFixed(2)} ${yAxisLabel}`, name];
             };
 
             return (
               <div>
-                {/* Line Toggle Controls */}
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex flex-wrap gap-3">
-                    {/* Reference Line Toggle */}
-                    <button
-                      onClick={() => toggleLine('reference')}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                        visibleLines.reference
-                          ? 'bg-red-500 text-white'
-                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      Reference ({formatDate(results.referenceDate)})
-                    </button>
-                    
-                    {/* Similar Day Line Toggles */}
-                    {results.similarityScores.slice(0, topN).map((score: SimilarityScore, index: number) => (
-                      <button
-                        key={score.day}
-                        onClick={() => toggleLine(score.day)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          visibleLines[score.day]
-                            ? 'text-white'
-                            : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                        }`}
-                        style={{
-                          backgroundColor: visibleLines[score.day] ? blueColors[index] : undefined
-                        }}
-                      >
-                        #{score.rank} ({formatDate(score.day)})
-                      </button>
-                    ))}
+                {!Plot ? (
+                  <div className="h-96 flex items-center justify-center text-gs-gray-500">
+                    Loading chart...
                   </div>
-                </div>
-                
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 40, right: 30, left: 40, bottom: 80 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="hour" 
-                      type="number"
-                      domain={[1, 24]}
-                      ticks={[1, 4, 8, 12, 16, 20, 24]}
-                      label={{ value: 'Hour', position: 'bottom', offset: 0 }}
-                    />
-                    <YAxis label={{ value: yAxisLabel, angle: -90, position: 'insideLeft' }} />
-                    <Tooltip 
-                      formatter={formatTooltip}
-                      labelFormatter={(hour) => `Hour ${hour}`}
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                      }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      wrapperStyle={{ paddingTop: '20px' }}
-                    />
-                    
-                    {/* Reference date line (red) */}
-                    <Line
-                      type="monotone"
-                      dataKey={`reference_${results.matchVariable.replace(/\s+/g, '_')}`}
-                      stroke="#EF4444"
-                      strokeWidth={3}
-                      dot={false}
-                      name="Reference"
-                      connectNulls={false}
-                      hide={!visibleLines.reference}
-                    />
-                    
-                    {/* Similar days lines (blue gradient) */}
-                    {results.similarityScores.slice(0, topN).map((score: any, index: number) => (
-                      <Line
-                        key={score.day}
-                        type="monotone"
-                        dataKey={`${score.day}_${results.matchVariable.replace(/\s+/g, '_')}`}
-                        stroke={blueColors[index]}
-                        strokeWidth={2}
-                        dot={false}
-                        name={`${score.rank} (${formatDate(score.day)})`}
-                        connectNulls={false}
-                        hide={!visibleLines[score.day]}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-                </div>
+                ) : (
+                  <Plot
+                    data={traces}
+                    layout={layout}
+                    config={config}
+                    style={{ width: '100%', height: '400px' }}
+                    useResizeHandler={true}
+                  />
+                )}
               </div>
             );
           })()
         ) : (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gs-gray-500">
             <div className="mb-4">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="mx-auto h-12 w-12 text-gs-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <p className="text-lg font-medium text-gray-900">Run Analysis to See Chart</p>
-            <p className="mt-2">Reference date vs similar historical days comparison will appear here.</p>
+            <p className="text-lg font-medium text-gs-gray-900">Run Analysis to See Chart</p>
+            <p className="mt-2 text-gs-gray-600">Reference date vs similar historical days comparison will appear here.</p>
           </div>
         )}
       </div>
+      </section>
 
       {/* Secondary Comparison Chart - Always Visible */}
-      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">
-            Secondary Variable Comparison
-          </h3>
+      <section>
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Secondary Variable Comparison</h2>
+          <p className="text-gs-gray-600">Compare an additional variable using the same similar days</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-gs-sm border-l-4 border-gs-green-500">
+          <div className="flex items-center justify-between mb-6">
           <div className="flex items-end gap-3">
             <div className="w-48">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gs-gray-700 mb-1">
                 Compare Variable
               </label>
               <select
@@ -1178,8 +1152,8 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
                   setSecondaryData(null); // Clear previous secondary data
                 }}
                 disabled={!results}
-                className={`w-full p-2 border border-gray-300 rounded-md text-sm ${
-                  !results ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'
+                  className={`w-full p-2 border border-gs-gray-300 rounded-lg text-sm transition-colors ${
+                    !results ? 'bg-gs-gray-100 text-gs-gray-400 cursor-not-allowed' : 'bg-white focus:ring-2 focus:ring-gs-blue-500 focus:border-gs-blue-500'
                 }`}
               >
                 <option value="">Select variable...</option>
@@ -1195,7 +1169,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
             <button
               onClick={handleSecondaryAnalysis}
               disabled={!results || !secondaryVariable || secondaryLoading}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-sm"
+                className="bg-gs-green-500 text-white px-4 py-2 rounded-lg hover:bg-gs-green-600 disabled:bg-gs-gray-400 disabled:cursor-not-allowed font-medium text-sm transition-colors"
             >
               {secondaryLoading ? 'Loading...' : 'Compare'}
             </button>
@@ -1227,148 +1201,126 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
 
               const blueColors = generateBlueGradient(topN);
               
-              // Toggle line visibility for secondary chart
-              const toggleSecondaryLine = (lineKey: string) => {
-                setSecondaryVisibleLines(prev => ({
-                  ...prev,
-                  [lineKey]: !prev[lineKey]
-                }));
-              };
-              
               console.log('🔍 Secondary chart data:', chartData.length, 'points');
               if (chartData.length > 0) {
                 console.log('🔍 First hour keys:', Object.keys(chartData[0]));
                 console.log('🔍 First hour data:', chartData[0]);
               }
 
+              // Generate secondary Plotly traces
+              const secondaryTraces: any[] = [];
+              const secondaryYAxisLabel = getVariableUnit(secondaryVariable);
+
+              // Reference line (red)
+              secondaryTraces.push({
+                x: chartData.map(d => d.hour),
+                y: chartData.map(d => d[`reference_${secondaryVariable.replace(/\s+/g, '_')}`]),
+                name: `Reference (${formatDate(referenceDate)})`,
+                type: 'scatter',
+                mode: 'lines',
+                line: {
+                  color: '#EF4444',
+                  width: 3
+                },
+                hovertemplate: `<b>Reference (${formatDate(referenceDate)})</b><br>Hour %{x}<br>%{y:.2f} ${secondaryYAxisLabel}<extra></extra>`
+              });
+
+              // Similar days lines (blue gradient)
+              results.similarityScores.slice(0, topN).forEach((score: any, index: number) => {
+                secondaryTraces.push({
+                  x: chartData.map(d => d.hour),
+                  y: chartData.map(d => d[`${score.day}_${secondaryVariable.replace(/\s+/g, '_')}`]),
+                  name: `#${score.rank} (${formatDate(score.day)})`,
+                  type: 'scatter',
+                  mode: 'lines',
+                  line: {
+                    color: blueColors[index],
+                    width: 2
+                  },
+                  hovertemplate: `<b>#${score.rank} (${formatDate(score.day)})</b><br>Hour %{x}<br>%{y:.2f} ${secondaryYAxisLabel}<extra></extra>`
+                });
+              });
+
+              // Secondary Plotly layout
+              const secondaryLayout = {
+                height: 400,
+                margin: { l: 80, r: 40, t: 20, b: 60 },
+                xaxis: {
+                  title: { text: 'Hour', font: { size: 14, family: 'Inter, sans-serif', color: '#374151' } },
+                  tickmode: 'array',
+                  tickvals: [1, 4, 8, 12, 16, 20, 24],
+                  showgrid: true,
+                  gridcolor: '#E5E7EB',
+                  zeroline: false,
+                  showline: true,
+                  linecolor: '#6B7280',
+                  linewidth: 1
+                },
+                yaxis: {
+                  title: { text: `${secondaryVariable} (${secondaryYAxisLabel})`, font: { size: 14, family: 'Inter, sans-serif', color: '#374151' } },
+                  showgrid: true,
+                  gridcolor: '#E5E7EB',
+                  zeroline: true,
+                  zerolinecolor: '#9CA3AF',
+                  showline: true,
+                  linecolor: '#6B7280',
+                  linewidth: 1
+                },
+                hovermode: 'x unified',
+                legend: {
+                  orientation: 'h',
+                  yanchor: 'top',
+                  y: -0.2,
+                  xanchor: 'center',
+                  x: 0.5,
+                  font: { size: 11, family: 'Inter, sans-serif' }
+                },
+                showlegend: true,
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white'
+              };
+
+              const secondaryConfig = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d', 'autoScale2d'],
+                toImageButtonOptions: {
+                  format: 'png',
+                  filename: `likeday_${secondaryVariable.replace(/\s+/g, '_')}`,
+                  height: 600,
+                  width: 1200,
+                  scale: 2
+                }
+              };
+
               return (
                 <div>
-                  {/* Line Toggle Controls for Secondary Chart */}
-                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex flex-wrap gap-3">
-                      {/* Reference Line Toggle */}
-                      <button
-                        onClick={() => toggleSecondaryLine('reference')}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          secondaryVisibleLines.reference
-                            ? 'bg-red-500 text-white'
-                            : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        Reference ({formatDate(referenceDate)})
-                      </button>
-                      
-                      {/* Similar Day Line Toggles */}
-                      {results.similarityScores.slice(0, topN).map((score: SimilarityScore, index: number) => (
-                        <button
-                          key={score.day}
-                          onClick={() => toggleSecondaryLine(score.day)}
-                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                            secondaryVisibleLines[score.day]
-                              ? 'text-white'
-                              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                          }`}
-                          style={{
-                            backgroundColor: secondaryVisibleLines[score.day] ? blueColors[index] : undefined
-                          }}
-                        >
-                          #{score.rank} ({formatDate(score.day)})
-                        </button>
-                      ))}
+                  {!Plot ? (
+                    <div className="h-96 flex items-center justify-center text-gs-gray-500">
+                      Loading chart...
                     </div>
-                  </div>
-                  
-                  <div className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                data={chartData}
-                margin={{ top: 20, right: 30, left: 60, bottom: 80 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="hour"
-                  domain={[1, 24]}
-                  type="number"
-                  ticks={[1, 4, 8, 12, 16, 20, 24]}
-                  tick={{ fontSize: 12 }}
-                  label={{ value: 'Hour', position: 'bottom', offset: 0 }}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  label={{ 
-                    value: `${secondaryVariable} (${getVariableUnit(secondaryVariable)})`, 
-                    angle: -90, 
-                    position: 'insideLeft',
-                    style: { textAnchor: 'middle' }
-                  }}
-                />
-                <Tooltip 
-                  formatter={(value, name) => [
-                    typeof value === 'number' ? value.toFixed(2) : value,
-                    name
-                  ]}
-                  labelFormatter={(hour) => `Hour ${hour}`}
-                />
-                <Legend 
-                  wrapperStyle={{ paddingTop: '20px' }}
-                  verticalAlign="bottom"
-                />
-                
-                {/* Reference Line */}
-                <Line
-                  type="monotone"
-                  dataKey={`reference_${secondaryVariable.replace(/\s+/g, '_')}`}
-                  stroke="#EF4444"
-                  strokeWidth={3}
-                  dot={false}
-                  name="Reference"
-                  hide={!secondaryVisibleLines.reference}
-                />
-                
-                {/* Similar Days Lines - Use same colors as main chart */}
-                {(() => {
-                  const generateBlueGradient = (count: number) => {
-                    const colors = [];
-                    for (let i = 0; i < count; i++) {
-                      const ratio = i / Math.max(count - 1, 1);
-                      const r = Math.floor(30 + (150 * ratio));
-                      const g = Math.floor(60 + (150 * ratio));
-                      const b = Math.floor(120 + (135 * ratio));
-                      colors.push(`rgb(${r}, ${g}, ${b})`);
-                    }
-                    return colors;
-                  };
-
-                  const blueColors = generateBlueGradient(topN);
-                  
-                  return results.similarityScores.slice(0, topN).map((score: any, index: number) => (
-                    <Line
-                      key={score.day}
-                      type="monotone"
-                      dataKey={`${score.day}_${secondaryVariable.replace(/\s+/g, '_')}`}
-                      stroke={blueColors[index]}
-                      strokeWidth={2}
-                      dot={false}
-                      name={`${score.rank} (${formatDate(score.day)})`}
-                      hide={!secondaryVisibleLines[score.day]}
+                  ) : (
+                    <Plot
+                      data={secondaryTraces}
+                      layout={secondaryLayout}
+                      config={secondaryConfig}
+                      style={{ width: '100%', height: '400px' }}
+                      useResizeHandler={true}
                     />
-                  ));
-                })()}
-              </LineChart>
-            </ResponsiveContainer>
-                  </div>
+                  )}
                 </div>
               );
             })()}
           </div>
         ) : (
-          <div className="h-96 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg">
-            <div className="text-center text-gray-400">
+          <div className="h-96 flex items-center justify-center border-2 border-dashed border-gs-gray-200 rounded-lg">
+            <div className="text-center text-gs-gray-400">
               <svg className="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              <p className="text-lg font-medium mb-2">Secondary Variable Comparison</p>
-              <p className="text-sm">
+              <p className="text-lg font-medium mb-2 text-gs-gray-900">Secondary Variable Comparison</p>
+              <p className="text-sm text-gs-gray-600">
                 {!results 
                   ? "Run analysis first, then select a variable and click Compare"
                   : !secondaryVariable
@@ -1380,6 +1332,7 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
           </div>
         )}
       </div>
+      </section>
 
     </div>
   );
