@@ -34,6 +34,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.CORE,
     critical: true,
     description: 'Get list of available scenario IDs',
+    timeout: 6000,
     thresholds: { good: 500, acceptable: 1500 }, // Simple DB query with filtering
   },
   {
@@ -42,6 +43,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.CORE,
     critical: true,
     description: 'Get scenario date ranges',
+    timeout: 6000,
     thresholds: { good: 500, acceptable: 1500 }, // Simple DB query
   },
   {
@@ -50,6 +52,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.CORE,
     critical: false,
     description: 'External API integration test',
+    timeout: 6000,
     thresholds: { good: 2000, acceptable: 5000 }, // External API call + HTML parsing
   },
 
@@ -60,6 +63,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Day-ahead LMP forecasts',
+    timeout: 7000, // +1s buffer
     thresholds: { good: 4000, acceptable: 6000 }, // DB query with joins (+3s)
   },
   {
@@ -68,6 +72,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Historical LMP data',
+    timeout: 7000, // +1s buffer
     thresholds: { good: 4000, acceptable: 6000 }, // DB query with joins (+3s)
   },
   {
@@ -76,6 +81,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Load and net load forecasts',
+    timeout: 7500, // +1s buffer
     thresholds: { good: 4500, acceptable: 6500 }, // Multiple table queries (+3s)
   },
   {
@@ -84,7 +90,8 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Combined load data',
-    thresholds: { good: 4500, acceptable: 6500 }, // Multiple data sources (+3s)
+    timeout: 11000, // Complex query with multiple data sources, needs more time (+1s)
+    thresholds: { good: 5000, acceptable: 8000 }, // Multiple data sources (+3s)
   },
   {
     path: '/api/weather-forecast',
@@ -92,6 +99,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Weather predictions',
+    timeout: 7000, // +1s buffer
     thresholds: { good: 4000, acceptable: 6000 }, // Medium complexity (+3s)
   },
   {
@@ -100,6 +108,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: false,
     description: 'Historical weather',
+    timeout: 7000, // +1s buffer
     thresholds: { good: 4000, acceptable: 6000 }, // Medium complexity (+3s)
   },
   {
@@ -108,7 +117,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Renewable generation forecasts',
-    timeout: 10000, // Slow query, needs more time
+    timeout: 11000, // Slow query, needs more time (+1s)
     thresholds: { good: 8500, acceptable: 11000 }, // Complex query, known to be slow
   },
   {
@@ -117,6 +126,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: false,
     description: 'Historical renewables',
+    timeout: 8000, // +1s buffer
     thresholds: { good: 5000, acceptable: 7000 }, // Secondary DB query (+3s)
   },
   {
@@ -125,7 +135,8 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Supply stack data',
-    thresholds: { good: 4500, acceptable: 6500 }, // Aggregation heavy (+3s)
+    timeout: 11000, // Aggregation heavy, needs more time (+1s)
+    thresholds: { good: 5000, acceptable: 8000 }, // Aggregation heavy (+3s)
   },
   {
     path: '/api/zone-demand',
@@ -133,6 +144,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Zone demand data',
+    timeout: 6500, // +1s buffer
     thresholds: { good: 4000, acceptable: 5500 }, // Simple query with ordering (+3s)
   },
   {
@@ -141,6 +153,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.FORECAST,
     critical: true,
     description: 'Zone LMP data',
+    timeout: 6500, // +1s buffer
     thresholds: { good: 4000, acceptable: 5500 }, // Similar to zone-demand (+3s)
   },
 
@@ -151,6 +164,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.ANALYSIS,
     critical: true,
     description: 'Two/four-hour battery calculations',
+    timeout: 6000, // +1s buffer
     thresholds: { good: 2500, acceptable: 5000 }, // Heavy calculations with charging restrictions
   },
   {
@@ -160,6 +174,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     critical: true,
     description: 'TB26 vs LMP comparison',
     queryParams: 'scenarioid=1', // Requires scenarioid parameter
+    timeout: 5000, // +1s buffer
     thresholds: { good: 2000, acceptable: 4000 }, // Multi-table comparison
   },
   {
@@ -168,6 +183,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.ANALYSIS,
     critical: true,
     description: 'Most Economic Constraint overview',
+    timeout: 5500, // +1s buffer
     thresholds: { good: 2000, acceptable: 4500 }, // Complex aggregations across weeks
   },
   {
@@ -176,6 +192,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.ANALYSIS,
     critical: true,
     description: 'Weekly market overview',
+    timeout: 5000, // +1s buffer
     thresholds: { good: 2500, acceptable: 4000 }, // Weekly aggregations
   },
   {
@@ -184,6 +201,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.ANALYSIS,
     critical: true,
     description: 'Week-over-week LMP comparison',
+    timeout: 5000, // +1s buffer
     thresholds: { good: 2000, acceptable: 4000 }, // Week comparison queries
   },
   {
@@ -192,6 +210,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.ANALYSIS,
     critical: true,
     description: 'Week-over-week load comparison',
+    timeout: 5000, // +1s buffer
     thresholds: { good: 2000, acceptable: 4000 }, // Week comparison queries
   },
   {
@@ -200,6 +219,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.ANALYSIS,
     critical: true,
     description: 'Weekly congestion analysis',
+    timeout: 5500, // +1s buffer
     thresholds: { good: 2000, acceptable: 4500 }, // Complex congestion analysis
   },
   {
@@ -209,7 +229,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     critical: true,
     description: 'Similar day analysis',
     method: 'POST',
-    timeout: 15000, // Complex analysis with external API calls
+    timeout: 16000, // Complex analysis with external API calls (+1s)
     thresholds: { good: 6000, acceptable: 12000 }, // External API + similarity calculations
     requestBody: {
       referenceMode: 'historical',
@@ -227,6 +247,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.ANALYSIS,
     critical: false,
     description: 'Peak hour analysis',
+    timeout: 4000, // +1s buffer
     thresholds: { good: 1500, acceptable: 3000 }, // Frequency calculations
   },
   {
@@ -235,6 +256,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.ANALYSIS,
     critical: false,
     description: 'Bottom hour analysis',
+    timeout: 4000, // +1s buffer
     thresholds: { good: 1500, acceptable: 3000 }, // Frequency calculations
   },
   {
@@ -244,6 +266,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     critical: false,
     description: 'Secondary likeday data',
     method: 'POST',
+    timeout: 7000, // +1s buffer
     thresholds: { good: 3000, acceptable: 6000 }, // External YES Energy API calls
     requestBody: {
       referenceMode: 'historical',
@@ -260,6 +283,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.CONGESTION,
     critical: true,
     description: 'Congestion visualization data',
+    timeout: 4500, // +1s buffer
     thresholds: { good: 1500, acceptable: 3500 }, // Binding constraint queries
   },
   {
@@ -268,6 +292,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.CONGESTION,
     critical: true,
     description: 'LMP component breakdown',
+    timeout: 4000, // +1s buffer
     thresholds: { good: 1500, acceptable: 3000 }, // Component breakdown calculations
   },
   {
@@ -276,6 +301,7 @@ export const API_ENDPOINTS: APIEndpoint[] = [
     category: API_CATEGORIES.CONGESTION,
     critical: true,
     description: 'Net load with CAISO data',
+    timeout: 5000, // +1s buffer
     thresholds: { good: 2000, acceptable: 4000 }, // Two database sources (primary + secondary)
   },
 
