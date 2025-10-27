@@ -1,0 +1,24 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import DatabaseHealthCheck from '../../components/admin/DatabaseHealthCheck';
+
+// Define sub-navigation for Short Term Outlook
+const subNavLinks: Array<{ label: string; href?: string; dropdown?: Array<{ label: string; href: string; description?: string }> }> = [
+  { 
+    label: 'CAISO Forecast',
+    dropdown: [
+      { label: 'CAISO System', href: '/short-term-outlook/caiso-system', description: 'System-wide fundamentals and forecasts' },
+      { label: 'Goleta', href: '/short-term-outlook/goleta', description: 'Location-specific pricing and congestion analysis' },
+    ]
+  },
+  { label: 'Weekly Insight', href: '/short-term-outlook/weekly-insight' },
+  { label: 'Likeday Tool', href: '/short-term-outlook/likeday' },
+];
+---
+
+<Layout title="Database Health Check" pageTitle="Short Term Outlook" subNavLinks={subNavLinks}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DatabaseHealthCheck client:load />
+  </div>
+</Layout>
+

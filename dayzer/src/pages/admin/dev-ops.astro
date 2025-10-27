@@ -1,0 +1,47 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import DatabaseHealthCard from '../../components/admin/DatabaseHealthCard';
+import APIHealthCard from '../../components/admin/APIHealthCard';
+import SystemInformation from '../../components/admin/SystemInformation';
+
+// Define sub-navigation for Short Term Outlook
+const subNavLinks: Array<{ label: string; href?: string; dropdown?: Array<{ label: string; href: string; description?: string }> }> = [
+  { 
+    label: 'CAISO Forecast',
+    dropdown: [
+      { label: 'CAISO System', href: '/short-term-outlook/caiso-system', description: 'System-wide fundamentals and forecasts' },
+      { label: 'Goleta', href: '/short-term-outlook/goleta', description: 'Location-specific pricing and congestion analysis' },
+    ]
+  },
+  { label: 'Weekly Insight', href: '/short-term-outlook/weekly-insight' },
+  { label: 'Likeday Tool', href: '/short-term-outlook/likeday' },
+];
+---
+
+<Layout title="Development Operations" pageTitle="Short Term Outlook" subNavLinks={subNavLinks}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-gray-900 mb-2">Development Operations</h1>
+      <p class="text-gray-600">System health monitoring, diagnostics, and operational tools</p>
+    </div>
+
+    <!-- Health Check Cards Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Database Health Card -->
+      <DatabaseHealthCard client:load />
+      
+      <!-- API Health Check Card -->
+      <APIHealthCard client:load />
+    </div>
+
+    <!-- System Information Section -->
+    <div class="mt-8">
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">System Information</h2>
+      <p class="text-gray-600 mb-6">Environment and operational status overview</p>
+      
+      <SystemInformation client:load />
+    </div>
+  </div>
+</Layout>
+

@@ -196,11 +196,11 @@ export function NavigationBar({
 
           {/* Right: Settings */}
           <div className="flex items-center gap-2 ml-4">
-            <button
+            <a
+              href="/admin/dev-ops"
               className="p-2 hover:bg-gs-gray-700 rounded-md transition-colors"
-              aria-label="Settings"
-              title="Settings"
-              onClick={onSettingsClick}
+              aria-label="Development Operations"
+              title="Development Operations"
             >
               {/* Settings Icon */}
               <svg
@@ -223,7 +223,7 @@ export function NavigationBar({
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-            </button>
+            </a>
           </div>
         </div>
       </div>
