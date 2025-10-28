@@ -1,48 +1,99 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+interface SystemInfo {
+  environment: {
+    nodeEnv: string;
+    isProduction: boolean;
+    platform: string;
+    nodeVersion: string;
+  };
+  deployment: {
+    platform: string;
+    context: string | null;
+    buildId: string | null;
+    deployUrl: string | null;
+    gitCommitSha: string | null;
+    gitBranch: string | null;
+    deployedAt: string;
+  };
+}
 
 const SystemInformation: React.FC = () => {
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSystemInfo = async () => {
+    try {
+      const response = await fetch('/api/system-info');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setSystemInfo(data);
+        setError(null);
+      } else {
+        setError(data.error || 'Failed to fetch system info');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSystemInfo();
+    
+    // Refresh every 30 seconds to update uptime
+    const interval = setInterval(fetchSystemInfo, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
+        <div className="text-center text-gray-500">Loading system information...</div>
+      </div>
+    );
+  }
+
+  if (error || !systemInfo) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
+        <div className="text-red-600">Failed to load system information</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Environment */}
         <div>
           <h4 className="text-sm font-medium text-gray-500 mb-2">Environment</h4>
-          <p className="text-2xl font-bold text-gray-900">Production</p>
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+            systemInfo.environment.isProduction 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-yellow-100 text-yellow-800'
+          }`}>
+            {systemInfo.environment.isProduction ? '🟢 Production' : '🟡 Development'}
+          </span>
+          <p className="text-xs text-gray-500 mt-2">Node {systemInfo.environment.nodeVersion}</p>
         </div>
 
-        {/* Deployment Status */}
+        {/* Deployment */}
         <div>
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Deployment Status</h4>
-          <div className="flex items-center">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-              <svg 
-                className="w-4 h-4 mr-1.5" 
-                fill="currentColor" 
-                viewBox="0 0 20 20"
-              >
-                <path 
-                  fillRule="evenodd" 
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
-                  clipRule="evenodd" 
-                />
-              </svg>
-              Active
-            </span>
-          </div>
+          <h4 className="text-sm font-medium text-gray-500 mb-2">Deployment</h4>
+          <p className="text-lg font-semibold text-gray-900">{systemInfo.deployment.platform}</p>
+          {systemInfo.deployment.gitCommitSha && (
+            <p className="text-xs text-gray-600 font-mono mt-1">
+              {systemInfo.deployment.gitBranch}: {systemInfo.deployment.gitCommitSha}
+            </p>
+          )}
+          <p className="text-xs text-gray-500 mt-1">
+            {new Date(systemInfo.deployment.deployedAt).toLocaleString()}
+          </p>
         </div>
-
-        {/* Last Check */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Last Check</h4>
-          <p className="text-2xl font-bold text-gray-900">Just now</p>
-        </div>
-      </div>
-      
-      {/* Placeholder for future functionality */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <p className="text-sm text-gray-500">
-          Additional system metrics and diagnostics will be displayed here
-        </p>
       </div>
     </div>
   );
