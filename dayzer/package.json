@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "node scripts/generate-build-info.cjs && astro build",
+    "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "postinstall": "prisma generate && prisma generate --schema=./prisma/schema-secondary.prisma",

@@ -2,8 +2,6 @@
 dist/
 # generated types
 .astro/
-# build metadata
-build-info.json
 
 # dependencies
 node_modules/
