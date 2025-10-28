@@ -9,12 +9,12 @@ export const GET: APIRoute = async () => {
     const packageJsonPath = join(process.cwd(), 'package.json');
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
     
-    // Detect environment
-    const environment = process.env.NODE_ENV || 'development';
-    const isProduction = environment === 'production';
+    // Detect environment - check Netlify context first, then NODE_ENV
+    const netlifyContext = process.env.CONTEXT; // 'production', 'deploy-preview', 'branch-deploy'
+    const isProduction = netlifyContext === 'production' || process.env.NODE_ENV === 'production';
+    const environment = isProduction ? 'production' : 'development';
     
     // Get Netlify-specific info if available
-    const netlifyContext = process.env.CONTEXT || null; // 'production', 'deploy-preview', 'branch-deploy'
     const netlifyBuildId = process.env.BUILD_ID || null;
     const netlifyDeployUrl = process.env.DEPLOY_URL || null;
     const gitCommitSha = process.env.COMMIT_REF || process.env.GIT_COMMIT || null;
