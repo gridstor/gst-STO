@@ -185,16 +185,17 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
   }, []);
 
   const formatDateTick = useCallback((tickItem: string) => {
-    // Extract just the date part and hour from ISO string to avoid timezone issues
-    const date = new Date(tickItem);
-    const utcDate = new Date(Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate()
-    ));
-    return utcDate.toLocaleDateString('en-US', { 
-      weekday: 'short'
-    });
+    // Parse the ISO date string directly to avoid timezone conversion
+    // tickItem format: "2025-10-29T07:00:00.000Z"
+    const dateMatch = tickItem.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateMatch) {
+      const [, year, month, day] = dateMatch;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'short'
+      });
+    }
+    return tickItem;
   }, []);
 
   return (
