@@ -155,13 +155,41 @@ export default function CongestionChart() {
     return traces;
   }, [data, allConstraints, colors]);
 
+  // Generate custom tick values at midnight of each day
+  const customTicks = useMemo(() => {
+    if (!data || data.length === 0) return { tickvals: [], ticktext: [] };
+    
+    const tickvals: string[] = [];
+    const ticktext: string[] = [];
+    const seenDates = new Set<string>();
+    
+    data.forEach(d => {
+      const dateOnly = d.datetime.split('T')[0]; // Extract YYYY-MM-DD
+      if (!seenDates.has(dateOnly)) {
+        // Find the midnight (hour 0) data point for this date
+        const midnightPoint = data.find(p => p.datetime.startsWith(dateOnly + 'T00:'));
+        if (midnightPoint) {
+          tickvals.push(midnightPoint.datetime);
+          // Format as "Oct 29"
+          const [year, month, day] = dateOnly.split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          ticktext.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+          seenDates.add(dateOnly);
+        }
+      }
+    });
+    
+    return { tickvals, ticktext };
+  }, [data]);
+
   // Plotly layout configuration
   const layout: any = useMemo(() => ({
     height: 500,
     margin: { l: 80, r: 40, t: 40, b: 70 },
     xaxis: {
       title: { text: '' },
-      tickformat: '%b %d',
+      tickvals: customTicks.tickvals,
+      ticktext: customTicks.ticktext,
       tickangle: 0,
       showgrid: true,
       gridcolor: '#E5E7EB',
@@ -228,7 +256,7 @@ export default function CongestionChart() {
       size: 13,
       color: '#6B7280'
     }
-  }), []);
+  }), [customTicks]);
 
   // Plotly config
   const config: any = {
