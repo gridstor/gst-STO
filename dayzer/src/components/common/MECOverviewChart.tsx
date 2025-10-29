@@ -126,7 +126,9 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
   };
 
   const formatXAxisTick = (value: string) => {
-    const date = new Date(value);
+    // Parse date string as local time to avoid timezone shift
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric'
