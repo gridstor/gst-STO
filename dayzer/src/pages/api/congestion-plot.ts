@@ -71,18 +71,25 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
+    // Calculate consistent date range: simulation_date through simulation_date + 6 (7 days total)
     const simulationDate = new Date(scenarioInfo.simulation_date);
-    simulationDate.setHours(0, 0, 0, 0); // Start of simulation day
+    const forecastStart = new Date(simulationDate);
+    forecastStart.setHours(0, 0, 0, 0);
+    const forecastEnd = new Date(simulationDate);
+    forecastEnd.setDate(forecastEnd.getDate() + 6);
+    forecastEnd.setHours(23, 59, 59, 999);
     
     console.log('Starting database queries...');
-    console.log('Filtering for dates >= ', simulationDate.toISOString());
+    console.log('Filtering for dates:', forecastStart.toISOString(), 'to', forecastEnd.toISOString());
 
-    // Query 1: binding_constraints_report - Only from simulation date onwards
+    // Query 1: binding_constraints_report - Filtered date range
     console.log('Query 1: binding_constraints_report');
     const bindingConstraints = await prisma.$queryRaw`
       SELECT "Date", "Hour", constraintid, congestion 
       FROM binding_constraints_report 
-      WHERE itemid = 66038 AND scenarioid = ${scenarioid} AND "Date" >= ${simulationDate}
+      WHERE itemid = 66038 AND scenarioid = ${scenarioid} 
+        AND "Date" >= ${forecastStart}
+        AND "Date" <= ${forecastEnd}
     ` as any[];
     console.log('Binding constraints found:', bindingConstraints.length);
 
@@ -95,12 +102,14 @@ export const GET: APIRoute = async ({ request }) => {
     ` as any[];
     console.log('Constraint mappings found:', constraintMapping.length);
 
-    // Query 3: results_constraints - Only from simulation date onwards
+    // Query 3: results_constraints - Filtered date range
     console.log('Query 3: results_constraints');
     const shadowPrices = await prisma.$queryRaw`
       SELECT "Date", "Hour", constraintid, shadowprice 
       FROM results_constraints 
-      WHERE scenarioid = ${scenarioid} AND "Date" >= ${simulationDate}
+      WHERE scenarioid = ${scenarioid} 
+        AND "Date" >= ${forecastStart}
+        AND "Date" <= ${forecastEnd}
     ` as any[];
     console.log('Shadow prices found:', shadowPrices.length);
 
