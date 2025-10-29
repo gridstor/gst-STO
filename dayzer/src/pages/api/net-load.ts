@@ -69,10 +69,18 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // Calculate consistent date range: simulation_date through simulation_date + 6 (7 days total)
+    // Parse date carefully to avoid timezone shift
+    console.log('Simulation date string:', scenarioInfo.simulation_date);
     const simulationDate = new Date(scenarioInfo.simulation_date);
+    console.log('Parsed simulation date:', simulationDate);
+    
     const forecastStart = new Date(simulationDate);
+    forecastStart.setHours(0, 0, 0, 0);
     const forecastEnd = new Date(simulationDate);
     forecastEnd.setDate(forecastEnd.getDate() + 6);
+    forecastEnd.setHours(23, 59, 59, 999);
+    
+    console.log('Forecast range:', forecastStart.toISOString(), 'to', forecastEnd.toISOString());
 
     // Get total demand from zone_demand table
     const demandResults = await prisma.zone_demand.findMany({
