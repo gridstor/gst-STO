@@ -64,10 +64,33 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
+    // Get scenario metadata to determine date range
+    const scenarioInfo = await prisma.info_scenarioid_scenarioname_mapping.findUnique({
+      where: { scenarioid },
+      select: { simulation_date: true }
+    });
+
+    if (!scenarioInfo?.simulation_date) {
+      return new Response(
+        JSON.stringify({ error: 'No simulation date found for scenario' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Calculate consistent date range: simulation_date through simulation_date + 6 (7 days total)
+    const simulationDate = new Date(scenarioInfo.simulation_date);
+    const forecastStart = new Date(simulationDate);
+    const forecastEnd = new Date(simulationDate);
+    forecastEnd.setDate(forecastEnd.getDate() + 6);
+
     // Get total demand from zone_demand table
     const demandResults = await prisma.zone_demand.findMany({
       where: {
         scenarioid,
+        Date: {
+          gte: forecastStart,
+          lte: forecastEnd
+        }
       },
       orderBy: [
         { Date: 'asc' },
@@ -100,6 +123,10 @@ export const GET: APIRoute = async ({ request }) => {
     const renewableResults = await prisma.results_units.findMany({
       where: {
         scenarioid,
+        Date: {
+          gte: forecastStart,
+          lte: forecastEnd
+        },
         OR: [
           { fuelname: 'sun' },
           { fuelname: 'Sun' },
