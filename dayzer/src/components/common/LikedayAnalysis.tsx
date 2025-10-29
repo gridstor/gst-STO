@@ -185,18 +185,61 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
   };
 
   // Format date for display
-  const formatDisplayDate = (dateString: string) => {
+  const formatDisplayDate = (dateInput: string | Date | any) => {
     try {
-      // Parse date string as local time to avoid timezone shift
-      const [year, month, day] = dateString.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
+      if (!dateInput) {
+        return 'Invalid Date';
+      }
+      
+      let date: Date;
+      
+      // If it's already a Date object, use it directly
+      if (dateInput instanceof Date) {
+        date = dateInput;
+      } else if (typeof dateInput === 'string') {
+        // Handle string formats
+        if (dateInput.includes('/')) {
+          // MM/DD/YYYY format
+          const [month, day, year] = dateInput.split('/').map(Number);
+          date = new Date(year, month - 1, day);
+        } else if (dateInput.includes('T')) {
+          // ISO format (e.g., "2025-10-29T00:00:00.000Z")
+          date = new Date(dateInput);
+        } else if (dateInput.includes('-')) {
+          const parts = dateInput.split('-');
+          
+          // Check if it's DD-MMM-YYYY format (e.g., "29-Oct-2025")
+          if (parts.length === 3 && isNaN(Number(parts[1]))) {
+            // Month is text (e.g., "Oct"), use Date constructor
+            date = new Date(dateInput);
+          } else {
+            // YYYY-MM-DD format - parse as local date
+            const datePart = dateInput.split('T')[0]; // Remove time part if exists
+            const [year, month, day] = datePart.split('-').map(Number);
+            date = new Date(year, month - 1, day);
+          }
+        } else {
+          // Try using Date constructor as fallback
+          date = new Date(dateInput);
+        }
+      } else {
+        return String(dateInput);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      
       return date.toLocaleDateString('en-US', { 
         year: 'numeric',
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
+        timeZone: 'UTC' // Use UTC to avoid timezone shifting for ISO dates
       });
-    } catch {
-      return dateString;
+    } catch (error) {
+      console.error('formatDisplayDate error:', dateInput, error);
+      return String(dateInput);
     }
   };
 
