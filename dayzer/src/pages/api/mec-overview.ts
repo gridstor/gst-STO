@@ -308,12 +308,12 @@ async function calculateWeeklyMEC(
 
     // Query marginal_units_report with margintype = 'm'
     const marginalUnitsRaw = await prisma.$queryRaw`
-      SELECT mur.unitid, mur.unitname, mur."Date", mur."Hour"
-      FROM "output_db"."marginal_units_report" mur
-      WHERE mur.scenarioid = ${scenarioId}
-        AND mur."Date" = ${targetDate}
-        AND mur."Hour" = ANY(${allTargetHours})
-        AND mur.margintype = 'm'
+      SELECT unitid, unitname, "Date", "Hour"
+      FROM marginal_units_report
+      WHERE scenarioid = ${scenarioId}
+        AND "Date" = ${targetDate}
+        AND "Hour" = ANY(${allTargetHours})
+        AND margintype = 'm'
     ` as any[];
 
     // Convert BigInt values
