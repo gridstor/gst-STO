@@ -401,8 +401,8 @@ const CombinedLoadChart = memo(function CombinedLoadChart() {
         ticklen: 5,
         tickwidth: 1,
         type: 'date',
-        tickmode: 'auto',
-        nticks: 8,
+        dtick: 86400000, // 1 day in milliseconds - forces daily ticks
+        tick0: data[0]?.datetime, // Start from first data point
         tickcolor: '#6B7280',
         tickfont: {
           size: 11,
