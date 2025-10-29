@@ -56,6 +56,26 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
+    // Get scenario metadata to determine date range
+    const scenarioInfo = await prisma.info_scenarioid_scenarioname_mapping.findUnique({
+      where: { scenarioid },
+      select: { simulation_date: true }
+    });
+
+    if (!scenarioInfo?.simulation_date) {
+      return new Response(
+        JSON.stringify({ error: 'No simulation date found for scenario' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Calculate consistent date range: simulation_date + 1 through simulation_date + 7
+    const simulationDate = new Date(scenarioInfo.simulation_date);
+    const forecastStart = new Date(simulationDate);
+    forecastStart.setDate(forecastStart.getDate() + 1); // Start 1 day after simulation
+    const forecastEnd = new Date(simulationDate);
+    forecastEnd.setDate(forecastEnd.getDate() + 7); // End 7 days after simulation
+
     // Get zone name mappings for this scenario
     const zoneNameMappings = await prisma.info_zoneid_zonename_mapping.findMany({
       where: {
@@ -72,29 +92,13 @@ export const GET: APIRoute = async ({ request }) => {
       zoneNameMappings.map((mapping: { zoneid: number; zonename: string }) => [mapping.zoneid, mapping.zonename])
     );
 
-    // Get scenario simulation date to filter data
-    const scenarioMetadata = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
-      where: { scenarioid },
-      select: { simulation_date: true }
-    });
-
-    // Calculate filter dates: simulation_date + 1 day onwards
-    let minDate = null;
-    if (scenarioMetadata?.simulation_date) {
-      const simDate = new Date(scenarioMetadata.simulation_date);
-      minDate = new Date(simDate);
-      minDate.setDate(simDate.getDate() + 1);
-      minDate.setHours(0, 0, 0, 0);
-    }
-
     // Build the query conditions
     const whereConditions: any = {
       scenarioid,
-      ...(minDate && {
-        Date: {
-          gte: minDate
-        }
-      })
+      Date: {
+        gte: forecastStart,
+        lte: forecastEnd
+      }
     };
     
     // If a specific zone is requested, filter by it
