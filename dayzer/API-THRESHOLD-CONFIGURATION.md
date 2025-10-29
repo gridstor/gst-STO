@@ -125,3 +125,4 @@ Each endpoint has **individualized thresholds** based on its actual complexity a
 
 **All 28 endpoints** now have **realistic, individualized thresholds** based on their actual complexity and performance characteristics. This provides accurate health status without false warnings for APIs that are naturally slower due to their complexity.
 
+

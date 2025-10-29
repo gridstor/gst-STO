@@ -72,9 +72,25 @@ export const GET: APIRoute = async ({ request }) => {
       zoneNameMappings.map((mapping: { zoneid: number; zonename: string }) => [mapping.zoneid, mapping.zonename])
     );
 
+    // Get scenario metadata to determine forecast window
+    const scenarioInfo = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+      where: { scenarioid },
+      select: { simulation_date: true }
+    });
+
+    // Calculate forecast window: simulation_date through simulation_date + 6 days
+    const simulationDate = scenarioInfo?.simulation_date ? new Date(scenarioInfo.simulation_date) : new Date();
+    const forecastStart = new Date(simulationDate);
+    const forecastEnd = new Date(simulationDate);
+    forecastEnd.setDate(forecastEnd.getDate() + 6);
+
     // Build the query conditions
     const whereConditions: any = {
       scenarioid,
+      Date: {
+        gte: forecastStart,
+        lte: forecastEnd
+      }
     };
     
     // If a specific zone is requested, filter by it

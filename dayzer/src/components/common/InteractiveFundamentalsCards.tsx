@@ -98,9 +98,14 @@ export default function InteractiveFundamentalsCards() {
   // Fetch cards data
   useEffect(() => {
     const fetchCardsData = async () => {
+      if (!selectedScenario) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
-        const response = await fetch('/api/week-overview?hours=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24');
+        const response = await fetch(`/api/week-overview?scenarioid=${selectedScenario.scenarioid}&hours=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24`);
         if (response.ok) {
           const result = await response.json();
           setCardsData(result.data || []);
@@ -116,7 +121,7 @@ export default function InteractiveFundamentalsCards() {
     };
 
     fetchCardsData();
-  }, []);
+  }, [selectedScenario]);
 
   // Fetch chart data when a metric is selected
   useEffect(() => {

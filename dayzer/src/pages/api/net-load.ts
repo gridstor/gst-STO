@@ -55,10 +55,26 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
-    // Get total demand from zone_demand table
+    // Get scenario metadata to determine date range
+    const scenarioInfo = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+      where: { scenarioid },
+      select: { simulation_date: true }
+    });
+
+    // Calculate forecast window: simulation_date through simulation_date + 6 days
+    const simulationDate = scenarioInfo?.simulation_date ? new Date(scenarioInfo.simulation_date) : new Date();
+    const forecastStart = new Date(simulationDate);
+    const forecastEnd = new Date(simulationDate);
+    forecastEnd.setDate(forecastEnd.getDate() + 6);
+
+    // Get total demand from zone_demand table (filtered to forecast window)
     const demandResults = await prisma.zone_demand.findMany({
       where: {
         scenarioid,
+        Date: {
+          gte: forecastStart,
+          lte: forecastEnd
+        }
       },
       orderBy: [
         { Date: 'asc' },
@@ -87,7 +103,7 @@ export const GET: APIRoute = async ({ request }) => {
       demandByDatetime[datetimeKey] += (row.demandmw || 0) / 1000; // Convert MW to GW
     });
 
-    // Get renewable generation from results_units table (solar and wind)
+    // Get renewable generation from results_units table (solar and wind, filtered to forecast window)
     const renewableResults = await prisma.results_units.findMany({
       where: {
         scenarioid,
@@ -96,7 +112,11 @@ export const GET: APIRoute = async ({ request }) => {
           { fuelname: 'Sun' },
           { fuelname: 'wind' },
           { fuelname: 'Wind' }
-        ]
+        ],
+        Date: {
+          gte: forecastStart,
+          lte: forecastEnd
+        }
       },
       orderBy: [
         { Date: 'asc' },

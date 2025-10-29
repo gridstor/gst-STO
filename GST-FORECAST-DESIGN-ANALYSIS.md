@@ -411,3 +411,4 @@ font-family: 'Inter', system-ui, sans-serif;
 4. Add proper focus states to all interactive elements
 5. Implement confirmation modals for destructive actions
 
+

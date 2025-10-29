@@ -160,15 +160,17 @@ export const GET: APIRoute = async ({ request }) => {
       }
     });
 
-    // Calculate date range from the data
+    // Calculate date range from simulation date through +6 days (7 day span)
     let dateRange = null;
-    if (results.length > 0) {
-      const dates = results.map(r => r.Date);
-      const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-      const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+    if (scenarioMetadata?.simulation_date) {
+      const simDate = new Date(scenarioMetadata.simulation_date);
+      const rangeStart = new Date(simDate);
+      const rangeEnd = new Date(simDate);
+      rangeEnd.setDate(rangeEnd.getDate() + 6);
+      
       dateRange = {
-        start: minDate.toISOString().split('T')[0],
-        end: maxDate.toISOString().split('T')[0]
+        start: rangeStart.toISOString().split('T')[0],
+        end: rangeEnd.toISOString().split('T')[0]
       };
     }
 
