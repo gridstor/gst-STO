@@ -368,7 +368,7 @@ export const GET: APIRoute = async ({ request }) => {
         });
         
         combinedData.push({
-          datetime: currentDate.toISOString().split('T')[0], // Use date only, no time/timezone
+          datetime: currentDate.toISOString(),
           dayName,
           thisWeekValue: thisWeekMatch?.value || null,
           lastWeekValue: lastWeekMatch?.value || null,
