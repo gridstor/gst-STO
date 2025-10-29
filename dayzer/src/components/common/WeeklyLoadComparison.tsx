@@ -184,9 +184,32 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
     })}`;
   }, []);
 
+  // Generate tick values at noon of each day to avoid timezone edge cases
+  const customTicks = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    // Find one data point per day (looking for hour 12 to avoid timezone issues)
+    const dailyTicks: string[] = [];
+    const seenDates = new Set<string>();
+    
+    data.forEach(point => {
+      const dateOnly = point.datetime.split('T')[0]; // Extract YYYY-MM-DD
+      if (!seenDates.has(dateOnly)) {
+        // Find the data point closest to noon for this date
+        const noonPoint = data.find(d => 
+          d.datetime.startsWith(dateOnly) && d.datetime.includes('T12:')
+        );
+        dailyTicks.push(noonPoint?.datetime || point.datetime);
+        seenDates.add(dateOnly);
+      }
+    });
+    
+    return dailyTicks;
+  }, [data]);
+
   const formatDateTick = useCallback((tickItem: string) => {
     // Parse the ISO date string directly to avoid timezone conversion
-    // tickItem format: "2025-10-29T07:00:00.000Z"
+    // tickItem format: "2025-10-29T12:00:00.000Z"
     const dateMatch = tickItem.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (dateMatch) {
       const [, year, month, day] = dateMatch;
@@ -238,10 +261,10 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
               <XAxis 
                 dataKey="datetime"
+                ticks={customTicks}
                 tickFormatter={formatDateTick}
                 tick={{ fontSize: 11 }}
                 tickLine={false}
-                interval={23}
                 height={50}
               />
               <YAxis 
