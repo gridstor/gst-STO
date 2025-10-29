@@ -71,11 +71,12 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
     const futureWeekScenario = dates.find(d => d.date === dateStr);
     if (!futureWeekScenario) return;
 
-    // Past Week: Find scenario for 7 days before selected date
-    const selectedDate = new Date(dateStr);
+    // Past Week: Find scenario for 7 days before selected date (parse as local time)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, day);
     const pastWeekDate = new Date(selectedDate);
     pastWeekDate.setDate(selectedDate.getDate() - 7);
-    const pastWeekDateStr = pastWeekDate.toISOString().split('T')[0];
+    const pastWeekDateStr = `${pastWeekDate.getFullYear()}-${String(pastWeekDate.getMonth() + 1).padStart(2, '0')}-${String(pastWeekDate.getDate()).padStart(2, '0')}`;
     
     const pastWeekScenario = dates.find(d => d.date === pastWeekDateStr);
 
@@ -105,7 +106,9 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
   };
 
   const formatDisplayDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    // Parse as local time to avoid timezone shift
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
@@ -133,9 +136,13 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
     
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = new Date(year, month, day).toISOString().split('T')[0];
-      const currentDate = new Date(dateStr);
-      const cutoffDate = new Date('2025-09-16');
+      // Format date as YYYY-MM-DD without timezone conversion
+      const monthStr = String(month + 1).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const dateStr = `${year}-${monthStr}-${dayStr}`;
+      
+      const currentDate = new Date(year, month, day); // Local time
+      const cutoffDate = new Date(2025, 8, 16); // Sept 16, 2025 in local time
       
       // Only allow dates after September 16th, 2025
       const isAfterCutoff = currentDate > cutoffDate;
@@ -199,12 +206,13 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
     return d.date === pastWeekDate.toISOString().split('T')[0];
   }) : null;
 
-  // Calculate date ranges
+  // Calculate date ranges (parse as local time to avoid timezone shift)
   const forecastDateRange = selectedScenario ? (() => {
-    const simDate = new Date(selectedScenario.date);
+    const [year, month, day] = selectedScenario.date.split('-').map(Number);
+    const simDate = new Date(year, month - 1, day);
     const startDate = new Date(simDate); // Starts ON simulation date
     const endDate = new Date(simDate);
-    endDate.setDate(simDate.getDate() + 7); // 7 days forward from simulation date
+    endDate.setDate(simDate.getDate() + 6); // 6 days forward (7 days total)
     return {
       start: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       end: endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -212,7 +220,8 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
   })() : null;
 
   const historicalDateRange = selectedScenario ? (() => {
-    const simDate = new Date(selectedScenario.date);
+    const [year, month, day] = selectedScenario.date.split('-').map(Number);
+    const simDate = new Date(year, month - 1, day);
     const endDate = new Date(simDate);
     endDate.setDate(simDate.getDate() - 1); // Day before simulation date
     const startDate = new Date(endDate);
@@ -301,7 +310,7 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
                             : 'text-gray-700 hover:bg-blue-100'
                         }`}
                       >
-                        {new Date(dateObj.date).getDate()}
+                        {parseInt(dateObj.date.split('-')[2])}
                       </button>
                     ) : dateObj && 'dayNumber' in dateObj ? (
                       // Non-selectable date (greyed out)
