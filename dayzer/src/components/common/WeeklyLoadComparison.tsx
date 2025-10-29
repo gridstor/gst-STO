@@ -185,7 +185,9 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
   }, []);
 
   const formatDateTick = useCallback((tickItem: string) => {
-    const date = new Date(tickItem);
+    // Parse date string as local time to avoid timezone shift
+    const [year, month, day] = tickItem.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     return date.toLocaleDateString('en-US', { 
       weekday: 'short'
     });
