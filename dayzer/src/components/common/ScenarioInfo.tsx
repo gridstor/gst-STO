@@ -28,14 +28,28 @@ export default function ScenarioInfo({ className = '' }: ScenarioInfoProps) {
   // Format date for display
   const formatDisplayDate = (dateString: string) => {
     try {
-      // Parse date string as local time to avoid timezone shift
-      const [year, month, day] = dateString.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      // Check if it's in YYYY-MM-DD format
+      if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Parse as local time to avoid timezone shift
+        const [year, month, day] = dateString.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('en-US', { 
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } else {
+        // Handle other formats (e.g., "27-Oct-2025")
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('en-US', { 
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+        }
+      }
+      return dateString;
     } catch {
       return dateString;
     }
