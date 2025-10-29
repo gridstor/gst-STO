@@ -183,17 +183,11 @@ export const GET: APIRoute = async ({ request }) => {
       }
     });
 
-    // Calculate date range from the data
-    let dateRange = null;
-    if (results.length > 0) {
-      const dates = results.map(r => r.Date);
-      const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-      const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-      dateRange = {
-        start: minDate.toISOString().split('T')[0],
-        end: maxDate.toISOString().split('T')[0]
-      };
-    }
+    // Use the forecast date range directly (already calculated above)
+    const dateRange = {
+      start: forecastStart.toISOString().split('T')[0],
+      end: forecastEnd.toISOString().split('T')[0]
+    };
 
     return new Response(JSON.stringify({ 
       scenarioid,
