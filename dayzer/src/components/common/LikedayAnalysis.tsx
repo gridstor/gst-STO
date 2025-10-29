@@ -398,14 +398,30 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
   };
 
   const formatDate = (dateString: string) => {
-    // Parse date string as local time to avoid timezone shift
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      // Handle both MM/DD/YYYY (from YES Energy API) and YYYY-MM-DD formats
+      let date: Date;
+      
+      if (dateString.includes('/')) {
+        // MM/DD/YYYY format (from YES Energy API)
+        const [month, day, year] = dateString.split('/').map(Number);
+        date = new Date(year, month - 1, day);
+      } else if (dateString.includes('-')) {
+        // YYYY-MM-DD format
+        const [year, month, day] = dateString.split('-').map(Number);
+        date = new Date(year, month - 1, day);
+      } else {
+        return dateString; // Return as-is if format is unrecognized
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString; // Return as-is if parsing fails
+    }
   };
 
   const getVariableUnit = (variable: string) => {
