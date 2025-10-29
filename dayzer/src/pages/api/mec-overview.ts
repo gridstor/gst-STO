@@ -143,21 +143,22 @@ export const GET: APIRoute = async ({ request }) => {
     console.log('Using scenario:', scenario);
 
     // Define date ranges based on scenario's simulation date (if provided) or today
-    const today = scenario.simulation_date ? new Date(scenario.simulation_date) : new Date();
+    const simulationDate = scenario.simulation_date ? new Date(scenario.simulation_date) : new Date();
     
-    // This Week: simulation_date through simulation_date + 6 days (7 day span)
-    const thisWeekStart = new Date(today);
+    // This Week: simulation date + 1 day through simulation date + 7 days (clean 7-day forecast)
+    const thisWeekStart = new Date(simulationDate);
+    thisWeekStart.setDate(simulationDate.getDate() + 1);
     thisWeekStart.setHours(0, 0, 0, 0);
-    const thisWeekEnd = new Date(today);
-    thisWeekEnd.setDate(today.getDate() + 6);
+    const thisWeekEnd = new Date(simulationDate);
+    thisWeekEnd.setDate(simulationDate.getDate() + 7);
     thisWeekEnd.setHours(23, 59, 59, 999);
     
-    // Last Week: (simulation_date - 7) through day before simulation_date
-    const lastWeekStart = new Date(today);
-    lastWeekStart.setDate(today.getDate() - 7);
+    // Last Week: 7 days before start through day before start
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
     lastWeekStart.setHours(0, 0, 0, 0);
-    const lastWeekEnd = new Date(today);
-    lastWeekEnd.setDate(today.getDate() - 1);
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setDate(thisWeekStart.getDate() - 1);
     lastWeekEnd.setHours(23, 59, 59, 999);
 
     console.log('This week:', thisWeekStart.toISOString(), 'to', thisWeekEnd.toISOString());

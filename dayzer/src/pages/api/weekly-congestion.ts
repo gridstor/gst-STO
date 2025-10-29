@@ -145,21 +145,22 @@ export const GET: APIRoute = async ({ request }) => {
     console.log('Using scenario:', scenario);
 
     // Define date ranges based on scenario's simulation date (if provided) or today
-    const today = scenario.simulation_date ? new Date(scenario.simulation_date) : new Date();
+    const simulationDate = scenario.simulation_date ? new Date(scenario.simulation_date) : new Date();
     
-    // This Week: Today through Today + 6 days (7 day span forward)
-    const thisWeekStart = new Date(today);
+    // This Week: simulation date + 1 day through simulation date + 7 days (clean 7-day forecast)
+    const thisWeekStart = new Date(simulationDate);
+    thisWeekStart.setDate(simulationDate.getDate() + 1);
     thisWeekStart.setHours(0, 0, 0, 0); // Start of day
-    const thisWeekEnd = new Date(today);
-    thisWeekEnd.setDate(today.getDate() + 6); // Today + 6 days
+    const thisWeekEnd = new Date(simulationDate);
+    thisWeekEnd.setDate(simulationDate.getDate() + 7); // simulation + 7 days
     thisWeekEnd.setHours(23, 59, 59, 999); // End of day
     
-    // Last Week: (Today - 7) through yesterday (7 day span backward)
-    const lastWeekStart = new Date(today);
-    lastWeekStart.setDate(today.getDate() - 7);
+    // Last Week: 7 days before start through day before start
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
     lastWeekStart.setHours(0, 0, 0, 0); // Start of day
-    const lastWeekEnd = new Date(today);
-    lastWeekEnd.setDate(today.getDate() - 1); // Yesterday
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setDate(thisWeekStart.getDate() - 1); // Day before start
     lastWeekEnd.setHours(23, 59, 59, 999); // End of yesterday
 
     console.log('This week (dynamic):', thisWeekStart.toISOString(), 'to', thisWeekEnd.toISOString());

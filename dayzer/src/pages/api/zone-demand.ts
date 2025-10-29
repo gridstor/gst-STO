@@ -71,9 +71,29 @@ export const GET: APIRoute = async ({ request }) => {
       zoneNameMappings.map((mapping: { zoneid: number; zonename: string }) => [mapping.zoneid, mapping.zonename])
     );
 
+    // Get scenario simulation date to filter data
+    const scenarioMetadata = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+      where: { scenarioid },
+      select: { simulation_date: true }
+    });
+
+    // Calculate filter dates: simulation_date + 1 day onwards
+    let minDate = null;
+    if (scenarioMetadata?.simulation_date) {
+      const simDate = new Date(scenarioMetadata.simulation_date);
+      minDate = new Date(simDate);
+      minDate.setDate(simDate.getDate() + 1);
+      minDate.setHours(0, 0, 0, 0);
+    }
+
     const results = await prisma.zone_demand.findMany({
       where: {
         scenarioid,
+        ...(minDate && {
+          Date: {
+            gte: minDate
+          }
+        })
       },
       orderBy: [
         { Date: 'asc' },
@@ -151,8 +171,20 @@ export const GET: APIRoute = async ({ request }) => {
     console.log('Unique datetime count:', Object.keys(aggregatedData).length);
     console.log('Sample datetime keys:', Object.keys(aggregatedData).slice(0, 10));
 
-    // Get scenario metadata (simulation date)
-    const scenarioMetadata = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+    // Calculate date range from the data
+    let dateRange = null;
+    if (results.length > 0) {
+      const dates = results.map(r => r.Date);
+      const minDateCalc = new Date(Math.min(...dates.map(d => d.getTime())));
+      const maxDateCalc = new Date(Math.max(...dates.map(d => d.getTime())));
+      dateRange = {
+        start: minDateCalc.toISOString().split('T')[0],
+        end: maxDateCalc.toISOString().split('T')[0]
+      };
+    }
+
+    // Re-fetch scenarioname for response
+    const scenarioInfo = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
       where: { scenarioid },
       select: { 
         simulation_date: true,
@@ -160,23 +192,9 @@ export const GET: APIRoute = async ({ request }) => {
       }
     });
 
-    // Calculate date range from simulation date through +6 days (7 day span)
-    let dateRange = null;
-    if (scenarioMetadata?.simulation_date) {
-      const simDate = new Date(scenarioMetadata.simulation_date);
-      const rangeStart = new Date(simDate);
-      const rangeEnd = new Date(simDate);
-      rangeEnd.setDate(rangeEnd.getDate() + 6);
-      
-      dateRange = {
-        start: rangeStart.toISOString().split('T')[0],
-        end: rangeEnd.toISOString().split('T')[0]
-      };
-    }
-
     return new Response(JSON.stringify({ 
       scenarioid,
-      simulationDate: scenarioMetadata?.simulation_date || null,
+      simulationDate: scenarioInfo?.simulation_date || null,
       dateRange,
       data: processedData 
     }), {
