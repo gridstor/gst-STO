@@ -113,12 +113,14 @@ export const GET: APIRoute = async ({ request }) => {
     ` as any[];
     console.log('Shadow prices found:', shadowPrices.length);
 
-    // Query 4: results_units - Only from simulation date onwards
+    // Query 4: results_units - Filtered date range
     console.log('Query 4: results_units');
     const resultsUnit = await prisma.$queryRaw`
       SELECT "Date", "Hour", congestion 
       FROM results_units 
-      WHERE unitid = 66038 AND scenarioid = ${scenarioid} AND "Date" >= ${simulationDate}
+      WHERE unitid = 66038 AND scenarioid = ${scenarioid} 
+        AND "Date" >= ${forecastStart}
+        AND "Date" <= ${forecastEnd}
     ` as any[];
     console.log('Results units found:', resultsUnit.length);
 
