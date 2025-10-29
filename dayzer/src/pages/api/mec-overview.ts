@@ -145,12 +145,11 @@ export const GET: APIRoute = async ({ request }) => {
     // Define date ranges based on scenario's simulation date (if provided) or today
     const today = scenario.simulation_date ? new Date(scenario.simulation_date) : new Date();
     
-    // This Week: Today + 1 through Today + 7 days (7 day span forward starting next day)
+    // This Week: simulation date through simulation date + 6 (7 days total)
     const thisWeekStart = new Date(today);
-    thisWeekStart.setDate(today.getDate() + 1); // Start 1 day after simulation
     thisWeekStart.setHours(0, 0, 0, 0);
     const thisWeekEnd = new Date(today);
-    thisWeekEnd.setDate(today.getDate() + 7); // End 7 days after simulation
+    thisWeekEnd.setDate(today.getDate() + 6);
     thisWeekEnd.setHours(23, 59, 59, 999);
     
     // Last Week: (Today - 7) through yesterday (7 day span backward)

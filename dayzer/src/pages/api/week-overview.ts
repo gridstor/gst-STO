@@ -93,11 +93,10 @@ export const GET: APIRoute = async ({ request }) => {
     // Parse simulation date and calculate date ranges
     const simulationDate = new Date(scenarioInfo.simulation_date);
     
-    // This week: simulation date + 1 through simulation date + 7
+    // This week: simulation date through simulation date + 6 (7 days total)
     const thisWeekStart = new Date(simulationDate);
-    thisWeekStart.setDate(thisWeekStart.getDate() + 1); // Start 1 day after simulation
     const thisWeekEnd = new Date(simulationDate);
-    thisWeekEnd.setDate(thisWeekEnd.getDate() + 7); // End 7 days after simulation
+    thisWeekEnd.setDate(thisWeekEnd.getDate() + 6);
     
     // Last week: 7 days before simulation date through day before simulation date
     const lastWeekStart = new Date(simulationDate);
