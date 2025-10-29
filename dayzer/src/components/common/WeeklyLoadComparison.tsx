@@ -219,15 +219,14 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
   }, [data]);
 
   const formatDateTick = useCallback((tickItem: string) => {
-    // Parse the ISO date string directly to avoid timezone conversion
-    // tickItem format: "2025-10-29T12:00:00.000Z"
+    // Extract date from ISO string and calculate weekday directly
     const dateMatch = tickItem.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (dateMatch) {
       const [, year, month, day] = dateMatch;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'short'
-      });
+      // Use UTC date to get day of week without timezone conversion
+      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return weekdays[date.getUTCDay()];
     }
     return tickItem;
   }, []);
