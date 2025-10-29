@@ -54,7 +54,9 @@ export default function WeeklyCongestionWrapper() {
 
   // Helper function to format date for display (MM/DD)
   const formatDateDisplay = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse date string as local time to avoid timezone shift
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
