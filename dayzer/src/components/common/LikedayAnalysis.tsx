@@ -187,7 +187,9 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
   // Format date for display
   const formatDisplayDate = (dateString: string) => {
     try {
-      const date = new Date(dateString);
+      // Parse date string as local time to avoid timezone shift
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
       return date.toLocaleDateString('en-US', { 
         year: 'numeric',
         month: 'short',
@@ -396,7 +398,10 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Parse date string as local time to avoid timezone shift
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
