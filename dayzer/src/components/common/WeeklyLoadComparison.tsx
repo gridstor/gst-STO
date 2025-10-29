@@ -188,19 +188,30 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
   const customTicks = useMemo(() => {
     if (!data || data.length === 0) return [];
     
-    // Find one data point per day (looking for hour 12 to avoid timezone issues)
+    // Count data points per day to filter out partial days
+    const dateCount = new Map<string, number>();
+    data.forEach(point => {
+      const dateOnly = point.datetime.split('T')[0];
+      dateCount.set(dateOnly, (dateCount.get(dateOnly) || 0) + 1);
+    });
+    
+    // Only show ticks for days with at least 20 hours of data (full days)
     const dailyTicks: string[] = [];
     const seenDates = new Set<string>();
     
     data.forEach(point => {
-      const dateOnly = point.datetime.split('T')[0]; // Extract YYYY-MM-DD
-      if (!seenDates.has(dateOnly)) {
-        // Find the data point closest to noon for this date
+      const dateOnly = point.datetime.split('T')[0];
+      const count = dateCount.get(dateOnly) || 0;
+      
+      if (count >= 20 && !seenDates.has(dateOnly)) {
+        // Find the noon data point for this date
         const noonPoint = data.find(d => 
           d.datetime.startsWith(dateOnly) && d.datetime.includes('T12:')
         );
-        dailyTicks.push(noonPoint?.datetime || point.datetime);
-        seenDates.add(dateOnly);
+        if (noonPoint) {
+          dailyTicks.push(noonPoint.datetime);
+          seenDates.add(dateOnly);
+        }
       }
     });
     
