@@ -214,31 +214,37 @@ export const GET: APIRoute = async ({ request }) => {
       totalCongestionMap.set(datetime, ru.congestion || 0);
     });
 
-    // Step 6: Build final result array (like res_df in Python)
-    const resultData = Array.from(datetimeGroups.keys())
-      .sort()
-      .map((datetime: string) => {
-        const constraintData = datetimeGroups.get(datetime);
-        const totalCongestion = totalCongestionMap.get(datetime) || 0;
-        
-        const row: any = {
-          datetime: datetime,
-          'Total Congestion': totalCongestion,
-        };
+    // Step 6: Generate ALL hourly timestamps and fill missing hours with zeros
+    const resultData: any[] = [];
+    
+    // Generate complete hourly range
+    const currentHour = new Date(forecastStart);
+    while (currentHour <= forecastEnd) {
+      const datetime = currentHour.toISOString();
+      const constraintData = datetimeGroups.get(datetime) || {};
+      const totalCongestion = totalCongestionMap.get(datetime) || 0;
+      
+      const row: any = {
+        datetime: datetime,
+        'Total Congestion': totalCongestion,
+      };
 
-        // Add each constraint as a column (like pivot in Python)
-        let sumConstraints = 0;
-        allConstraintNames.forEach((constraintName: string) => {
-          const congestionValue = constraintData[constraintName] || 0;
-          row[constraintName] = congestionValue;
-          sumConstraints += congestionValue;
-        });
-
-        // Calculate "Other" category (like Python: Total - sum(constraints))
-        row['Other'] = totalCongestion - sumConstraints;
-
-        return row;
+      // Add each constraint as a column (zero if no data for this hour)
+      let sumConstraints = 0;
+      allConstraintNames.forEach((constraintName: string) => {
+        const congestionValue = constraintData[constraintName] || 0;
+        row[constraintName] = congestionValue;
+        sumConstraints += congestionValue;
       });
+
+      // Calculate "Other" category
+      row['Other'] = totalCongestion - sumConstraints;
+
+      resultData.push(row);
+      
+      // Move to next hour
+      currentHour.setHours(currentHour.getHours() + 1);
+    }
 
     console.log('Final result data points:', resultData.length);
     console.log('Sample data point:', resultData[0]);

@@ -155,7 +155,7 @@ export default function CongestionChart() {
     return traces;
   }, [data, allConstraints, colors]);
 
-  // Generate custom tick values at midnight of each day
+  // Generate custom tick values at midnight (or first hour) of each day
   const customTicks = useMemo(() => {
     if (!data || data.length === 0) return { tickvals: [], ticktext: [] };
     
@@ -166,10 +166,16 @@ export default function CongestionChart() {
     data.forEach(d => {
       const dateOnly = d.datetime.split('T')[0]; // Extract YYYY-MM-DD
       if (!seenDates.has(dateOnly)) {
-        // Find the midnight (hour 0) data point for this date
-        const midnightPoint = data.find(p => p.datetime.startsWith(dateOnly + 'T00:'));
-        if (midnightPoint) {
-          tickvals.push(midnightPoint.datetime);
+        // Find the midnight (hour 0) or first available hour for this date
+        let tickPoint = data.find(p => p.datetime.startsWith(dateOnly + 'T00:'));
+        
+        // If no midnight point, use the first data point of this day
+        if (!tickPoint) {
+          tickPoint = data.find(p => p.datetime.startsWith(dateOnly));
+        }
+        
+        if (tickPoint) {
+          tickvals.push(tickPoint.datetime);
           // Format as "Oct 29"
           const [year, month, day] = dateOnly.split('-').map(Number);
           const date = new Date(year, month - 1, day);
@@ -178,6 +184,8 @@ export default function CongestionChart() {
         }
       }
     });
+    
+    console.log('Congestion chart custom ticks:', { tickvals, ticktext });
     
     return { tickvals, ticktext };
   }, [data]);
