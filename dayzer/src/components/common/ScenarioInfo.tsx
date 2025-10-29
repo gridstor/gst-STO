@@ -28,7 +28,9 @@ export default function ScenarioInfo({ className = '' }: ScenarioInfoProps) {
   // Format date for display
   const formatDisplayDate = (dateString: string) => {
     try {
-      const date = new Date(dateString);
+      // Parse date string as local time to avoid timezone shift
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
       return date.toLocaleDateString('en-US', { 
         year: 'numeric',
         month: 'short',
