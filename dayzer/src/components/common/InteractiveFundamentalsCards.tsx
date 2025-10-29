@@ -202,21 +202,25 @@ export default function InteractiveFundamentalsCards() {
   const layout: any = useMemo(() => {
     if (!selectedMetric) return {};
     
-    // Calculate tick values - one per day (at midnight or first hour)
+    // Calculate tick values - one per day (avoiding timezone issues)
     const tickvals: string[] = [];
     const ticktext: string[] = [];
     
     if (chartData.length > 0) {
       const seenDates = new Set<string>();
       chartData.forEach(d => {
-        const date = new Date(d.datetime);
-        const dateKey = date.toDateString();
+        // Extract date portion from ISO string to avoid timezone conversion
+        const dateOnly = d.datetime.split('T')[0]; // "2025-10-29"
         
-        if (!seenDates.has(dateKey)) {
-          seenDates.add(dateKey);
+        if (!seenDates.has(dateOnly)) {
+          seenDates.add(dateOnly);
           tickvals.push(d.datetime);
-          // Get weekday abbreviation (Mon, Tue, Wed, etc.)
-          ticktext.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+          
+          // Calculate weekday from date components without timezone conversion
+          const [year, month, day] = dateOnly.split('-').map(Number);
+          const utcDate = new Date(Date.UTC(year, month - 1, day));
+          const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          ticktext.push(weekdays[utcDate.getUTCDay()]);
         }
       });
     }
