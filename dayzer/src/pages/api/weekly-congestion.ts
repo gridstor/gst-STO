@@ -109,39 +109,39 @@ export const GET: APIRoute = async ({ request }) => {
     const url = new URL(request.url);
     const requestedScenarioId = url.searchParams.get('scenarioId');
     
-    let targetScenarioRaw;
+    let targetScenario;
     if (requestedScenarioId) {
       // Use requested scenario
-      targetScenarioRaw = await prisma.$queryRaw`
-        SELECT scenarioid, scenarioname, simulation_date
-        FROM "output_db"."info_scenarioid_scenarioname_mapping"
-        WHERE scenarioid = ${parseInt(requestedScenarioId)}
-        LIMIT 1
-      ` as any[];
-      console.log('Using requested scenario:', targetScenarioRaw[0]);
+      targetScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+        where: { scenarioid: parseInt(requestedScenarioId) },
+        select: {
+          scenarioid: true,
+          scenarioname: true,
+          simulation_date: true
+        }
+      });
+      console.log('Using requested scenario:', targetScenario);
     } else {
       // Get most recent scenario (default behavior)
-      targetScenarioRaw = await prisma.$queryRaw`
-        SELECT scenarioid, scenarioname, simulation_date
-        FROM "output_db"."info_scenarioid_scenarioname_mapping"
-        ORDER BY scenarioid DESC
-        LIMIT 1
-      ` as any[];
-      console.log('Using latest scenario:', targetScenarioRaw[0]);
+      targetScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+        orderBy: { scenarioid: 'desc' },
+        select: {
+          scenarioid: true,
+          scenarioname: true,
+          simulation_date: true
+        }
+      });
+      console.log('Using latest scenario:', targetScenario);
     }
 
-    if (!targetScenarioRaw || targetScenarioRaw.length === 0) {
+    if (!targetScenario) {
       return new Response(
         JSON.stringify({ error: 'No scenarios found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Convert BigInt scenarioid
-    const scenario = {
-      ...targetScenarioRaw[0],
-      scenarioid: Number(targetScenarioRaw[0].scenarioid)
-    };
+    const scenario = targetScenario;
     console.log('Using scenario:', scenario);
 
     // Define date ranges based on scenario's simulation date (if provided) or today
@@ -223,22 +223,25 @@ async function calculateWeeklyCongestion(
   console.log(`🔋 Weekly Congestion: Using ${new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' })} charging restrictions`);
   
   // Step 1: Fetch LMP data from results_units (unitid = 66038)
-  const lmpResultsRaw = await prisma.$queryRaw`
-    SELECT "Date", "Hour", lmp
-    FROM "output_db"."results_units"
-    WHERE scenarioid = ${scenarioId}
-      AND unitid = 66038
-      AND "Date" >= ${startDate}
-      AND "Date" <= ${endDate}
-    ORDER BY "Date" ASC, "Hour" ASC
-  ` as any[];
-
-  // Convert BigInt values to numbers
-  const lmpResults = lmpResultsRaw.map((row: any) => ({
-    ...row,
-    Hour: Number(row.Hour),
-    lmp: Number(row.lmp || 0)
-  }));
+  const lmpResults = await prisma.results_units.findMany({
+    where: {
+      scenarioid: scenarioId,
+      unitid: 66038,
+      Date: {
+        gte: startDate,
+        lte: endDate
+      }
+    },
+    select: {
+      Date: true,
+      Hour: true,
+      lmp: true
+    },
+    orderBy: [
+      { Date: 'asc' },
+      { Hour: 'asc' }
+    ]
+  });
 
   console.log('LMP data count:', lmpResults.length);
 
@@ -249,7 +252,7 @@ async function calculateWeeklyCongestion(
   // Step 2: Process LMP data and group by day
   const lmpDataByDate: { [dateString: string]: HourlyLMPData[] } = {};
   
-  lmpResults.forEach((row: any) => {
+  lmpResults.forEach((row) => {
     const dateKey = new Date(row.Date).toISOString().split('T')[0];
     
     if (!lmpDataByDate[dateKey]) {
@@ -259,27 +262,25 @@ async function calculateWeeklyCongestion(
     lmpDataByDate[dateKey].push({
       Date: new Date(row.Date),
       Hour: row.Hour,
-      lmp: row.lmp
+      lmp: row.lmp || 0
     });
   });
 
   console.log('LMP data grouped by date:', Object.keys(lmpDataByDate).map(date => `${date}: ${lmpDataByDate[date].length} hours`));
 
   // Step 3: Fetch constraint mapping for names
-  const constraintMappingRaw = await prisma.$queryRaw`
-    SELECT constraintid, constraintname 
-    FROM "output_db"."transmission_constraint_characteristics"
-    WHERE scenarioid = ${scenarioId}
-  ` as any[];
-
-  // Convert BigInt constraintid
-  const constraintMapping = constraintMappingRaw.map((row: any) => ({
-    constraintid: Number(row.constraintid),
-    constraintname: row.constraintname
-  }));
+  const constraintMapping = await prisma.transmission_constraint_characteristics.findMany({
+    where: {
+      scenarioid: scenarioId
+    },
+    select: {
+      constraintid: true,
+      constraintname: true
+    }
+  });
 
   const constraintNameMap = new Map();
-  constraintMapping.forEach((item: any) => {
+  constraintMapping.forEach((item) => {
     constraintNameMap.set(item.constraintid, item.constraintname);
   });
 
@@ -332,29 +333,29 @@ async function calculateWeeklyCongestion(
     const targetDate = new Date(dateString);
     const allTargetHours = [...topHours, ...bottomHours];
 
-    const congestionDataRaw = await prisma.$queryRaw`
-      SELECT "Date", "Hour", constraintid, congestion 
-      FROM "output_db"."binding_constraints_report"
-      WHERE itemid = 66038 
-        AND scenarioid = ${scenarioId}
-        AND "Date" = ${targetDate}
-        AND "Hour" = ANY(${allTargetHours})
-    ` as any[];
-
-    // Convert BigInt values to numbers
-    const congestionData = congestionDataRaw.map((row: any) => ({
-      Date: new Date(row.Date),
-      Hour: Number(row.Hour),
-      constraintid: Number(row.constraintid),
-      congestion: Number(row.congestion || 0)
-    }));
+    const congestionData = await prisma.binding_constraints_report.findMany({
+      where: {
+        itemid: 66038,
+        scenarioid: scenarioId,
+        Date: targetDate,
+        Hour: {
+          in: allTargetHours
+        }
+      },
+      select: {
+        Date: true,
+        Hour: true,
+        constraintid: true,
+        congestion: true
+      }
+    });
 
     // Process congestion data with constraint names
-    const processedCongestionData: CongestionData[] = congestionData.map((item: any) => ({
-      Date: item.Date,
+    const processedCongestionData: CongestionData[] = congestionData.map((item) => ({
+      Date: new Date(item.Date),
       Hour: item.Hour,
       constraintid: item.constraintid,
-      congestion: item.congestion,
+      congestion: item.congestion || 0,
       constraintname: constraintNameMap.get(item.constraintid) || `Constraint ${item.constraintid}`
     }));
 

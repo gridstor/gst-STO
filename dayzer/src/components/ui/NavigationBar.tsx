@@ -87,32 +87,42 @@ export function NavigationBar({
         <div className="flex justify-between items-center py-4">
           {/* Left: Logo + Navigation */}
           <div className="flex items-center gap-8">
-            {/* Logo - Links to main GridStor Analytics site */}
-            <a
-              href="https://gridstoranalytics.com"
-              className="flex items-center gap-3 text-xl font-bold hover:text-gray-300 transition-colors"
-              aria-label="GridStor Analytics Home"
-            >
-              {/* Lightning Bolt Icon */}
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 100 100"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8"
-                role="presentation"
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              {/* Lightning Bolt Icon - Links to main GridStor Analytics site */}
+              <a
+                href="https://gridstoranalytics.com"
+                className="hover:opacity-80 transition-opacity"
+                aria-label="GridStor Analytics Home"
               >
-                <path
-                  d="M55 10L30 55H50L45 90L70 45H50L55 10Z"
-                  fill="#06B6D4"
-                  stroke="#06B6D4"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span>{displayTitle}</span>
-            </a>
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 100 100"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-8 h-8"
+                  role="presentation"
+                >
+                  <path
+                    d="M55 10L30 55H50L45 90L70 45H50L55 10Z"
+                    fill="#06B6D4"
+                    stroke="#06B6D4"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+              
+              {/* Page Title - Links to Short Term Outlook */}
+              <a
+                href="/short-term-outlook"
+                className="text-xl font-bold hover:text-gray-300 transition-colors"
+                aria-label="Short Term Outlook Home"
+              >
+                <span>{displayTitle}</span>
+              </a>
+            </div>
 
             {/* Navigation Links (Main or Sub-navigation) */}
             <nav

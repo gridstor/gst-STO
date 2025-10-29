@@ -107,39 +107,39 @@ export const GET: APIRoute = async ({ request }) => {
     const url = new URL(request.url);
     const requestedScenarioId = url.searchParams.get('scenarioId');
     
-    let targetScenarioRaw;
+    let targetScenario;
     if (requestedScenarioId) {
       // Use requested scenario
-      targetScenarioRaw = await prisma.$queryRaw`
-        SELECT scenarioid, scenarioname, simulation_date
-        FROM "output_db"."info_scenarioid_scenarioname_mapping"
-        WHERE scenarioid = ${parseInt(requestedScenarioId)}
-        LIMIT 1
-      ` as any[];
-      console.log('Using requested scenario:', targetScenarioRaw[0]);
+      targetScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+        where: { scenarioid: parseInt(requestedScenarioId) },
+        select: {
+          scenarioid: true,
+          scenarioname: true,
+          simulation_date: true
+        }
+      });
+      console.log('Using requested scenario:', targetScenario);
     } else {
       // Get most recent scenario (default behavior)
-      targetScenarioRaw = await prisma.$queryRaw`
-        SELECT scenarioid, scenarioname, simulation_date
-        FROM "output_db"."info_scenarioid_scenarioname_mapping"
-        ORDER BY scenarioid DESC
-        LIMIT 1
-      ` as any[];
-      console.log('Using latest scenario:', targetScenarioRaw[0]);
+      targetScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+        orderBy: { scenarioid: 'desc' },
+        select: {
+          scenarioid: true,
+          scenarioname: true,
+          simulation_date: true
+        }
+      });
+      console.log('Using latest scenario:', targetScenario);
     }
 
-    if (!targetScenarioRaw || targetScenarioRaw.length === 0) {
+    if (!targetScenario) {
       return new Response(
         JSON.stringify({ error: 'No scenarios found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Convert BigInt scenarioid
-    const scenario = {
-      ...targetScenarioRaw[0],
-      scenarioid: Number(targetScenarioRaw[0].scenarioid)
-    };
+    const scenario = targetScenario;
     console.log('Using scenario:', scenario);
 
     // Define date ranges based on scenario's simulation date (if provided) or today
@@ -225,22 +225,25 @@ async function calculateWeeklyMEC(
   console.log(`🔋 MEC Overview: Using ${new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' })} charging restrictions`);
   
   // Step 1: Fetch LMP data from results_units (unitid = 66038) - same as weekly congestion
-  const lmpResultsRaw = await prisma.$queryRaw`
-    SELECT "Date", "Hour", lmp
-    FROM "output_db"."results_units"
-    WHERE scenarioid = ${scenarioId}
-      AND unitid = 66038
-      AND "Date" >= ${startDate}
-      AND "Date" <= ${endDate}
-    ORDER BY "Date" ASC, "Hour" ASC
-  ` as any[];
-
-  // Convert BigInt values to numbers
-  const lmpResults = lmpResultsRaw.map((row: any) => ({
-    ...row,
-    Hour: Number(row.Hour),
-    lmp: Number(row.lmp || 0)
-  }));
+  const lmpResults = await prisma.results_units.findMany({
+    where: {
+      scenarioid: scenarioId,
+      unitid: 66038,
+      Date: {
+        gte: startDate,
+        lte: endDate
+      }
+    },
+    select: {
+      Date: true,
+      Hour: true,
+      lmp: true
+    },
+    orderBy: [
+      { Date: 'asc' },
+      { Hour: 'asc' }
+    ]
+  });
 
   console.log('LMP data count:', lmpResults.length);
 
@@ -251,7 +254,7 @@ async function calculateWeeklyMEC(
   // Step 2: Process LMP data and group by day
   const lmpDataByDate: { [dateString: string]: HourlyLMPData[] } = {};
   
-  lmpResults.forEach((row: any) => {
+  lmpResults.forEach((row) => {
     const dateKey = new Date(row.Date).toISOString().split('T')[0];
     
     if (!lmpDataByDate[dateKey]) {
@@ -261,7 +264,7 @@ async function calculateWeeklyMEC(
     lmpDataByDate[dateKey].push({
       Date: new Date(row.Date),
       Hour: row.Hour,
-      lmp: row.lmp
+      lmp: row.lmp || 0
     });
   });
 
@@ -328,47 +331,51 @@ async function calculateWeeklyMEC(
 
     // Step 5: Get energy costs from results_units
     const unitIds = [...new Set(marginalUnits.map(u => u.unitid))];
-    const energyCostsRaw = await prisma.$queryRaw`
-      SELECT unitid, "Date", "Hour", energy
-      FROM "output_db"."results_units"
-      WHERE scenarioid = ${scenarioId}
-        AND unitid = ANY(${unitIds})
-        AND "Date" = ${targetDate}
-        AND "Hour" = ANY(${allTargetHours})
-    ` as any[];
-
-    // Convert BigInt values
-    const energyCosts = energyCostsRaw.map((row: any) => ({
-      unitid: Number(row.unitid),
-      Date: new Date(row.Date),
-      Hour: Number(row.Hour),
-      energy: Number(row.energy || 0)
-    }));
+    // Use Prisma ORM for results_units energy costs
+    const energyCosts = await prisma.results_units.findMany({
+      where: {
+        scenarioid: scenarioId,
+        unitid: {
+          in: unitIds
+        },
+        Date: targetDate,
+        Hour: {
+          in: allTargetHours
+        }
+      },
+      select: {
+        unitid: true,
+        Date: true,
+        Hour: true,
+        energy: true
+      }
+    });
 
     // Step 6: Get unit types from generation_unit_characteristics
-    const unitCharacteristicsRaw = await prisma.$queryRaw`
-      SELECT unitid, unittype
-      FROM "output_db"."generation_unit_characteristics"
-      WHERE scenarioid = ${scenarioId}
-        AND unitid = ANY(${unitIds})
-    ` as any[];
-
-    // Convert BigInt values
-    const unitCharacteristics = unitCharacteristicsRaw.map((row: any) => ({
-      unitid: Number(row.unitid),
-      unittype: row.unittype
-    }));
+    // Use Prisma ORM for generation_unit_characteristics
+    const unitCharacteristics = await prisma.generation_unit_characteristics.findMany({
+      where: {
+        scenarioid: scenarioId,
+        unitid: {
+          in: unitIds
+        }
+      },
+      select: {
+        unitid: true,
+        unittype: true
+      }
+    });
 
     // Create lookup maps
     const energyCostMap = new Map();
     energyCosts.forEach(cost => {
       const key = `${cost.unitid}-${cost.Hour}`;
-      energyCostMap.set(key, cost.energy);
+      energyCostMap.set(key, cost.energy || 0);
     });
 
     const unitTypeMap = new Map();
     unitCharacteristics.forEach(char => {
-      unitTypeMap.set(char.unitid, char.unittype);
+      unitTypeMap.set(char.unitid, char.unittype || 'Unknown');
     });
 
     // Step 7: Build marginal unit data with energy costs and unit types
