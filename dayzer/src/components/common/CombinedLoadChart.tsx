@@ -117,8 +117,12 @@ const CombinedLoadChart = memo(function CombinedLoadChart() {
       // Add last week data
       if (lastWeekData.data) {
         lastWeekData.data.forEach((point: any) => {
+          // Convert datetime to local timezone string to prevent Plotly timezone shift
+          const dt = new Date(point.datetime);
+          const localDatetime = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')} ${String(dt.getUTCHours()).padStart(2, '0')}:00:00`;
+          
           combinedData.push({
-            datetime: point.datetime,
+            datetime: localDatetime,
             isLastWeek: true,
             dayzerLoadLastWeek: point.dayzerLoad,
             dayzerNetLoadLastWeek: point.dayzerNetLoad,
@@ -136,8 +140,12 @@ const CombinedLoadChart = memo(function CombinedLoadChart() {
       // Add forecast data
       if (forecastData.data) {
         forecastData.data.forEach((point: any) => {
+          // Convert datetime to local timezone string to prevent Plotly timezone shift
+          const dt = new Date(point.datetime);
+          const localDatetime = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')} ${String(dt.getUTCHours()).padStart(2, '0')}:00:00`;
+          
           combinedData.push({
-            datetime: point.datetime,
+            datetime: localDatetime,
             isLastWeek: false,
             dayzerLoadForecast: point.dayzerLoad,
             dayzerNetLoadForecast: point.dayzerNetLoad,
@@ -392,6 +400,9 @@ const CombinedLoadChart = memo(function CombinedLoadChart() {
         ticks: 'outside',
         ticklen: 5,
         tickwidth: 1,
+        type: 'date',
+        tickmode: 'auto',
+        nticks: 8,
         tickcolor: '#6B7280',
         tickfont: {
           size: 11,
