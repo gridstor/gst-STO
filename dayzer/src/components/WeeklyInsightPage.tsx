@@ -29,7 +29,7 @@ export default function WeeklyInsightPage() {
             <section id="pricing" className="scroll-mt-24">
               <div className="mb-6">
                 <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Pricing</h2>
-                <p className="text-gs-gray-600">LMP forecast analysis and price component breakdown</p>
+                <p className="text-gs-gray-600">Locational Marginal Pricing forecasts and historical component breakdown</p>
               </div>
               <CombinedLMPChart />
             </section>
@@ -38,18 +38,16 @@ export default function WeeklyInsightPage() {
             <section id="fundamentals" className="scroll-mt-24">
               <div className="mb-6">
                 <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Fundamentals</h2>
-                <p className="text-gs-gray-600">Load and renewable generation forecasts</p>
+                <p className="text-gs-gray-600">CAISO Load, Net Load, and Renewable forecasts and historicals</p>
               </div>
               
-              {/* Load Forecast Subsection */}
+              {/* Load Forecast */}
               <div className="mb-8">
-                <h3 className="text-xl font-medium text-gs-gray-900 mb-4">Load Forecast</h3>
                 <CombinedLoadChart />
               </div>
               
-              {/* Renewables Forecast Subsection */}
+              {/* Renewables Forecast */}
               <div>
-                <h3 className="text-xl font-medium text-gs-gray-900 mb-4">Renewables Forecast</h3>
                 <CombinedRenewablesChart />
               </div>
             </section>
@@ -58,7 +56,7 @@ export default function WeeklyInsightPage() {
             <section id="weather" className="scroll-mt-24">
               <div className="mb-6">
                 <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Weather</h2>
-                <p className="text-gs-gray-600">Temperature and degree-day forecasts</p>
+                <p className="text-gs-gray-600">Los Angeles Temperature and Degree-Day forecasts and historicals</p>
               </div>
               <CombinedWeatherChart />
             </section>

@@ -87,11 +87,11 @@ export function NavigationBar({
         <div className="flex justify-between items-center py-4">
           {/* Left: Logo + Navigation */}
           <div className="flex items-center gap-8">
-            {/* Logo - ALWAYS links to home */}
+            {/* Logo - Links to main GridStor Analytics site */}
             <a
-              href="/"
+              href="https://gridstoranalytics.com"
               className="flex items-center gap-3 text-xl font-bold hover:text-gray-300 transition-colors"
-              aria-label="GridStor Short Term Outlook Home"
+              aria-label="GridStor Analytics Home"
             >
               {/* Lightning Bolt Icon */}
               <svg

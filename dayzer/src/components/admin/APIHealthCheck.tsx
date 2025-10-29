@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS, RESPONSE_THRESHOLDS, getEndpointsByCategory } from '../../lib/api-test-config';
 import APIStatusCard from './APIStatusCard';
 import APITestLogs from './APITestLogs';
@@ -19,6 +19,7 @@ const APIHealthCheck: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<TestResult[]>([]);
   const [progress, setProgress] = useState(0);
+  const [nextAutoRun, setNextAutoRun] = useState<Date | null>(null);
 
   const runAllTests = async () => {
     setIsRunning(true);
@@ -93,7 +94,39 @@ const APIHealthCheck: React.FC = () => {
     } catch (error) {
       console.error('Failed to save API health results to localStorage:', error);
     }
+    
+    // Schedule next auto-run in 1 hour
+    const nextRun = new Date();
+    nextRun.setHours(nextRun.getHours() + 1);
+    setNextAutoRun(nextRun);
   };
+
+  // Auto-run tests every hour
+  useEffect(() => {
+    // Load previous results if they exist
+    try {
+      const stored = localStorage.getItem('apiHealthResults');
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.results && Array.isArray(data.results)) {
+          setResults(data.results);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load previous results:', error);
+    }
+
+    // Run tests immediately on mount
+    runAllTests();
+    
+    // Set up hourly interval
+    const interval = setInterval(() => {
+      console.log('Auto-running API health check (hourly schedule)');
+      runAllTests();
+    }, 60 * 60 * 1000); // 1 hour in milliseconds
+    
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array - only run on mount
 
   const testEndpoint = async (path: string, endpointConfig?: typeof API_ENDPOINTS[0]): Promise<Partial<TestResult>> => {
     const startTime = performance.now();
@@ -185,6 +218,11 @@ const APIHealthCheck: React.FC = () => {
               🔍 API Health Check
             </h1>
             <p className="text-gray-600">Monitor and test all API endpoints for system health</p>
+            {nextAutoRun && !isRunning && (
+              <p className="text-sm text-gray-500 mt-1">
+                🕐 Next auto-run: {nextAutoRun.toLocaleTimeString()}
+              </p>
+            )}
           </div>
           
           <div className="flex gap-3">
