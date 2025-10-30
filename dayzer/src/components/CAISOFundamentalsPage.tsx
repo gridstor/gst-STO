@@ -75,8 +75,8 @@ export default function CAISOFundamentalsPage() {
             {/* MEC Overview - Full Width at Bottom */}
             <section>
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Marginal Energy Component</h2>
-                <p className="text-gs-gray-600">Marginal Energy Component for Top 2 and Bottom 2 Hours</p>
+                <h2 className="text-2xl font-semibold text-gs-gray-900 mb-2">Marginal Unit</h2>
+                <p className="text-gs-gray-600">Marginal Unit for Top 2 and Bottom 2 Hours</p>
               </div>
               <MECOverviewWrapper />
             </section>

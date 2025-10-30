@@ -217,8 +217,6 @@ const ZoneDemandChart: React.FC = () => {
 
   return (
     <div className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
-      <h3 className="text-lg font-semibold text-gs-gray-900 mb-6">Hourly Zone Demand</h3>
-
       {loading && <div className="text-gs-gray-500">Loading chart data...</div>}
       {error && <div className="text-gs-red-500">Error: {error}</div>}
       

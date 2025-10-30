@@ -247,8 +247,7 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
         href="/short-term-outlook/caiso-system#mec-overview"
         className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm hover:shadow-gs-lg transition-shadow duration-gs-base p-6 block cursor-pointer"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gs-gray-900">This Week</h3>
+        <div className="flex items-center justify-end mb-6">
           <div className="flex items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-6 h-0.5 bg-gs-red-600"></div>
@@ -267,8 +266,7 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
 
   return (
     <div className="bg-white border-l-4 border-gs-blue-500 rounded-lg shadow-gs-sm p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gs-gray-900">This Week</h3>
+      <div className="flex items-center justify-end mb-6">
         <div className="flex items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-6 h-0.5 bg-gs-red-600"></div>
