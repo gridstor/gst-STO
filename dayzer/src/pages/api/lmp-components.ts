@@ -84,10 +84,12 @@ export const GET: APIRoute = async ({ request }) => {
     ` as any[];
 
     const data = results.map((row: any) => {
-      const date = new Date(row.Date);
-      const hour = String(row.Hour).padStart(2, '0');
+      // Create a datetime by combining date and hour using setHours for proper handling
+      const datetime = new Date(row.Date);
+      datetime.setHours(row.Hour, 0, 0, 0);
+      
       return {
-        datetime: `${date.toISOString().slice(0, 10)}T${hour}:00`,
+        datetime: datetime.toISOString(),
         Energy: row.energy,
         Congestion: row.congestion,
         Loss: row.losses,
