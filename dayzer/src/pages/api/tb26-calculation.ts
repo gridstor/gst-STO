@@ -243,11 +243,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 // This Week calculation with charging restrictions
 async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDate: Date) {
-  // Determine dominant month for this week
-  const dominantMonth = getDominantMonth(startDate, endDate);
-  const chargingRestrictions = getChargingRestrictionsForMonth(dominantMonth);
-  
-  console.log(`🔋 This Week: Using ${new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' })} charging restrictions`);
+  console.log(`🔋 This Week: Using day-level granularity for charging restrictions`);
 
   // Fetch data from results_units for Goleta (unitid = 66038)
   const results = await prisma.results_units.findMany({
@@ -316,6 +312,14 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
       return;
     }
 
+    // Get charging restrictions for THIS SPECIFIC DAY's month
+    const dayDate = new Date(dateString);
+    const dayMonth = dayDate.getMonth();
+    const chargingRestrictions = getChargingRestrictionsForMonth(dayMonth);
+    const monthName = dayDate.toLocaleDateString('en-US', { month: 'long' });
+    
+    console.log(`🔋 Charging for ${dateString} (This Week Forecast) - Using ${monthName} restrictions`);
+
     // Sort by LMP (cheapest first)
     const sortedByLMP = [...dayData].sort((a, b) => a.lmp - b.lmp);
 
@@ -329,8 +333,6 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
     let congestionCost = 0;
     let mwBought = 0;
     let buyIndex = 0;
-
-    console.log(`🔋 Charging for ${dateString} (This Week Forecast):`);
 
     // Iteratively buy energy from cheapest hours until we reach capacity
     while (mwBought < batteryCapacity && buyIndex < sortedByLMP.length) {
@@ -426,11 +428,7 @@ async function calculateThisWeekTB26(scenarioId: number, startDate: Date, endDat
 }
 
 async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date) {
-  // Determine dominant month for this week
-  const dominantMonth = getDominantMonth(startDate, endDate);
-  const chargingRestrictions = getChargingRestrictionsForMonth(dominantMonth);
-  
-  console.log(`🔋 Last Week/Year: Using ${new Date(2025, dominantMonth, 1).toLocaleDateString('en-US', { month: 'long' })} charging restrictions`);
+  console.log(`🔋 Last Week/Year: Using day-level granularity for charging restrictions`);
 
   // Adjust query to capture boundary hours - extend range by 1 day on each side
   const queryStartDate = new Date(startDate);
@@ -570,6 +568,14 @@ async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date)
       return;
     }
 
+    // Get charging restrictions for THIS SPECIFIC DAY's month
+    const dayDate = new Date(dateString);
+    const dayMonth = dayDate.getMonth();
+    const chargingRestrictions = getChargingRestrictionsForMonth(dayMonth);
+    const monthName = dayDate.toLocaleDateString('en-US', { month: 'long' });
+    
+    console.log(`🔋 Charging for ${dateString} - Using ${monthName} restrictions`);
+
     // Sort by LMP (cheapest first)
     const sortedByLMP = [...dayData].sort((a, b) => a.lmp - b.lmp);
 
@@ -583,8 +589,6 @@ async function calculateLastWeekTB26(pool: Pool, startDate: Date, endDate: Date)
     let congestionCost = 0;
     let mwBought = 0;
     let buyIndex = 0;
-
-    console.log(`🔋 Charging for ${dateString}:`);
 
     // Iteratively buy energy from cheapest hours until we reach capacity
     while (mwBought < batteryCapacity && buyIndex < sortedByLMP.length) {
