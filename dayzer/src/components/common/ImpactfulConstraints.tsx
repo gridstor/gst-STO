@@ -286,7 +286,7 @@ export default function ImpactfulConstraints() {
 
   if (loading) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 h-full flex items-center justify-center">
+      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 w-full flex items-center justify-center" style={{ minHeight: '600px' }}>
         <div className="text-gs-gray-500 text-sm">Loading constraints...</div>
       </div>
     );
@@ -294,7 +294,7 @@ export default function ImpactfulConstraints() {
 
   if (error) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 h-full flex items-center justify-center">
+      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 w-full flex items-center justify-center" style={{ minHeight: '600px' }}>
         <div className="text-red-500 text-sm">Error: {error}</div>
       </div>
     );
@@ -302,7 +302,7 @@ export default function ImpactfulConstraints() {
 
   if (constraints.length === 0 && appliedHours.length > 0) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 h-full flex items-center justify-center">
+      <div className="bg-white p-4 rounded-lg shadow-gs-sm border border-gs-gray-200 w-full flex items-center justify-center" style={{ minHeight: '600px' }}>
         <div className="text-gs-gray-500 text-sm">No constraint data available</div>
       </div>
     );
