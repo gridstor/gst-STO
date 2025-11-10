@@ -122,8 +122,13 @@ export const GET: APIRoute = async ({ request }) => {
       });
       console.log('Using requested scenario:', targetScenario);
     } else {
-      // Get most recent scenario (default behavior)
+      // Find the most recent scenarioid with "CAISO_WEEK" in the name
       targetScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+        where: {
+          scenarioname: {
+            contains: 'CAISO_WEEK'
+          }
+        },
         orderBy: { scenarioid: 'desc' },
         select: {
           scenarioid: true,
@@ -131,7 +136,19 @@ export const GET: APIRoute = async ({ request }) => {
           simulation_date: true
         }
       });
-      console.log('Using latest scenario:', targetScenario);
+      
+      // If no CAISO_WEEK scenario found, fall back to most recent overall
+      if (!targetScenario) {
+        targetScenario = await prisma.info_scenarioid_scenarioname_mapping.findFirst({
+          orderBy: { scenarioid: 'desc' },
+          select: {
+            scenarioid: true,
+            scenarioname: true,
+            simulation_date: true
+          }
+        });
+      }
+      console.log('Using latest CAISO_WEEK scenario:', targetScenario);
     }
 
     if (!targetScenario) {
