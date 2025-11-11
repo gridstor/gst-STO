@@ -90,8 +90,6 @@ const CombinedLMPChart = memo(function CombinedLMPChart() {
     setError(null);
 
     try {
-      console.log('Fetching LMP with scenarios:', { currentWeekScenario: currentWeekScenarioId, lastWeekScenario: lastWeekScenarioId });
-
       // Build API URLs with scenario parameters from state
       const forecastUrl = currentWeekScenarioId 
         ? `/api/lmp-forecast?scenarioId=${currentWeekScenarioId}`
@@ -176,7 +174,6 @@ const CombinedLMPChart = memo(function CombinedLMPChart() {
   // Listen for scenario changes
   useEffect(() => {
     const handleScenarioChange = (event: CustomEvent) => {
-      console.log('LMP chart received scenario change:', event.detail);
       if (event.detail.currentWeekScenario) {
         setCurrentWeekScenarioId(event.detail.currentWeekScenario.toString());
       }

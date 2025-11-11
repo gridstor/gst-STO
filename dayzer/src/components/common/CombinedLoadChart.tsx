@@ -81,8 +81,6 @@ const CombinedLoadChart = memo(function CombinedLoadChart() {
     setError(null);
 
     try {
-      console.log('Fetching load with scenarios:', { currentWeekScenario: currentWeekScenarioId, lastWeekScenario: lastWeekScenarioId });
-
       // Build API URLs with scenario parameters from state
       const forecastUrl = currentWeekScenarioId 
         ? `/api/load-net-load-forecast?scenarioId=${currentWeekScenarioId}`
@@ -172,7 +170,6 @@ const CombinedLoadChart = memo(function CombinedLoadChart() {
   // Listen for scenario changes
   useEffect(() => {
     const handleScenarioChange = (event: CustomEvent) => {
-      console.log('CombinedLoadChart received scenario change:', event.detail);
       if (event.detail.currentWeekScenario) {
         setCurrentWeekScenarioId(event.detail.currentWeekScenario.toString());
       }

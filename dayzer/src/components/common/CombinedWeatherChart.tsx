@@ -69,8 +69,6 @@ const CombinedWeatherChart = memo(function CombinedWeatherChart() {
     setError(null);
 
     try {
-      console.log('Fetching weather with scenarios:', { currentWeekScenario: currentWeekScenarioId, lastWeekScenario: lastWeekScenarioId });
-
       // Build API URLs with scenario parameters from state
       const forecastUrl = currentWeekScenarioId 
         ? `/api/weather-forecast?scenarioId=${currentWeekScenarioId}`
@@ -145,12 +143,6 @@ const CombinedWeatherChart = memo(function CombinedWeatherChart() {
         };
       });
 
-      console.log('Weather data sample (first 3 adjusted points):', adjustedData.slice(0, 3).map(d => ({
-        datetime: d.datetime,
-        date: new Date(d.datetime).toLocaleString(),
-        isLastWeek: d.isLastWeek
-      })));
-
       setData(adjustedData);
 
     } catch (err) {
@@ -164,7 +156,6 @@ const CombinedWeatherChart = memo(function CombinedWeatherChart() {
   // Listen for scenario changes
   useEffect(() => {
     const handleScenarioChange = (event: CustomEvent) => {
-      console.log('Weather chart received scenario change:', event.detail);
       if (event.detail.currentWeekScenario) {
         setCurrentWeekScenarioId(event.detail.currentWeekScenario.toString());
       }

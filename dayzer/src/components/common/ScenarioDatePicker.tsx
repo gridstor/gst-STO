@@ -20,14 +20,11 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
-    console.log('📅 DATE PICKER COMPONENT MOUNTED');
-    
     const fetchAvailableDates = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        console.log('📅 DATE PICKER: Fetching available dates...');
         const response = await fetch('/api/available-scenario-dates');
         
         if (!response.ok) {
@@ -35,8 +32,6 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
         }
         
         const data = await response.json();
-        console.log('Available dates received:', data);
-        console.log('Available dates count:', data.availableDates?.length || 0);
         
         setAvailableDates(data.availableDates || []);
         
@@ -80,7 +75,6 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
     
     const pastWeekScenario = dates.find(d => d.date === pastWeekDateStr);
 
-    console.log(`SELECTED: ${dateStr} → Future: ${futureWeekScenario.scenarioid}, Past: ${pastWeekScenario?.scenarioid || 'None'}`);
 
     setSelectedDate(dateStr);
     setIsCalendarOpen(false);
@@ -240,7 +234,6 @@ function ScenarioDatePicker({ onDateChange }: ScenarioDatePickerProps = {}) {
           <span className="text-sm font-medium text-gs-gray-600">Simulation Date:</span>
           <button
             onClick={() => {
-              console.log('📅 CALENDAR BUTTON CLICKED');
               setIsCalendarOpen(!isCalendarOpen);
             }}
             className="text-sm font-semibold text-gs-gray-900 hover:text-gs-blue-600 cursor-pointer underline decoration-dotted underline-offset-2 flex items-center gap-1 transition-colors font-mono"

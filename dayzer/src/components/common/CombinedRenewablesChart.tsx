@@ -78,8 +78,6 @@ const CombinedRenewablesChart = memo(function CombinedRenewablesChart() {
     setError(null);
 
     try {
-      console.log('Fetching renewables with scenarios:', { currentWeekScenario: currentWeekScenarioId, lastWeekScenario: lastWeekScenarioId });
-
       // Build API URLs with scenario parameters from state
       const forecastUrl = currentWeekScenarioId 
         ? `/api/renewables-forecast?scenarioId=${currentWeekScenarioId}`
@@ -159,7 +157,6 @@ const CombinedRenewablesChart = memo(function CombinedRenewablesChart() {
   // Listen for scenario changes
   useEffect(() => {
     const handleScenarioChange = (event: CustomEvent) => {
-      console.log('Renewables chart received scenario change:', event.detail);
       if (event.detail.currentWeekScenario) {
         setCurrentWeekScenarioId(event.detail.currentWeekScenario.toString());
       }

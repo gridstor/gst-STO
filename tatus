@@ -1,5 +1,0 @@
-[33m0346212[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m FIX: Tuesday label in InteractiveFundamentalsCards chart
-[33mc7c6ec8[m Fix Plotly timezone shift in CombinedLoadChart x-axis
-[33me4a74f6[m Add debug logging and use UTC day calculation for x-axis labels
-[33md570c58[m Use UTC day calculation to fix x-axis weekday labels
-[33mf18f406[m Filter out partial days from x-axis ticks in weekly load comparison

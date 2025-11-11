@@ -576,9 +576,6 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
     const referenceData = results.chartData?.[variable]?.[results.referenceDate];
     if (!referenceData) return [];
 
-    console.log(`🔍 Processing chart data for variable: ${variable}`);
-    console.log('🔍 Reference data sample:', referenceData.slice(0, 2));
-
     const chartData = [];
 
     // Process data for hours 1-24
@@ -619,9 +616,6 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
         
         if (variableKey) {
           hourData[`reference_${variable.replace(/\s+/g, '_')}`] = refPoint[variableKey];
-          console.log(`🔍 Hour ${hour}: Found reference key "${variableKey}" = ${refPoint[variableKey]}`);
-        } else {
-          console.log(`⚠️ Hour ${hour}: No variable key found for ${variable}. Available keys:`, Object.keys(refPoint));
         }
       }
 
@@ -668,7 +662,6 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
       chartData.push(hourData);
     }
 
-    console.log(`🔍 Final chart data for ${variable}:`, chartData.slice(0, 3));
     return chartData;
   };
 
@@ -1264,12 +1257,6 @@ const LikedayAnalysis: React.FC<LikedayAnalysisProps> = () => {
               };
 
               const blueColors = generateBlueGradient(topN);
-              
-              console.log('🔍 Secondary chart data:', chartData.length, 'points');
-              if (chartData.length > 0) {
-                console.log('🔍 First hour keys:', Object.keys(chartData[0]));
-                console.log('🔍 First hour data:', chartData[0]);
-              }
 
               // Generate secondary Plotly traces
               const secondaryTraces: any[] = [];

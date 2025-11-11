@@ -70,8 +70,6 @@ export default function ScenarioInfo({ className = '' }: ScenarioInfoProps) {
   // Get available dates for the calendar
   const getAvailableDates = () => {
     const dates = availableScenarios.map(scenario => scenario.simulation_date);
-    console.log('ScenarioInfo - Available scenarios:', availableScenarios);
-    console.log('ScenarioInfo - Extracted dates:', dates);
     return dates;
   };
 

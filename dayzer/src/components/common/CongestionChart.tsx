@@ -185,7 +185,6 @@ export default function CongestionChart() {
       }
     });
     
-    console.log('Congestion chart custom ticks:', { tickvals, ticktext });
     
     return { tickvals, ticktext };
   }, [data]);

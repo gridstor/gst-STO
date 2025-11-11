@@ -188,19 +188,12 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
   const customTicks = useMemo(() => {
     if (!data || data.length === 0) return [];
     
-    console.log('=== TICK GENERATION DEBUG ===');
-    console.log('Total data points:', data.length);
-    console.log('First datetime:', data[0]?.datetime);
-    console.log('Last datetime:', data[data.length - 1]?.datetime);
-    
     // Count data points per day to filter out partial days
     const dateCount = new Map<string, number>();
     data.forEach(point => {
       const dateOnly = point.datetime.split('T')[0];
       dateCount.set(dateOnly, (dateCount.get(dateOnly) || 0) + 1);
     });
-    
-    console.log('Date counts:', Array.from(dateCount.entries()));
     
     // Only show ticks for days with at least 20 hours of data (full days)
     const dailyTicks: string[] = [];
@@ -218,13 +211,9 @@ const WeeklyLoadComparison: React.FC = React.memo(() => {
         if (noonPoint) {
           dailyTicks.push(noonPoint.datetime);
           seenDates.add(dateOnly);
-          console.log(`Tick added for ${dateOnly}: ${noonPoint.datetime} (${count} hours)`);
         }
       }
     });
-    
-    console.log('Final ticks:', dailyTicks);
-    console.log('=== END DEBUG ===');
     
     return dailyTicks;
   }, [data]);

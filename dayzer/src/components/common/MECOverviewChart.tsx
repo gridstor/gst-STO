@@ -55,13 +55,10 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
       setError(null);
 
       try {
-        console.log('Fetching MCE overview data...');
         const apiUrl = scenarioId 
           ? `${window.location.origin}/api/mec-overview?scenarioId=${scenarioId}`
           : `${window.location.origin}/api/mec-overview`;
         const response = await fetch(apiUrl);
-        console.log('Response status:', response.status);
-        
         if (!response.ok) {
           const errorText = await response.text();
           console.error('API error:', errorText);
@@ -69,7 +66,6 @@ export default function MECOverviewChart({ scenarioId }: MECOverviewChartProps =
         }
         
         const jsonData: MECResponse = await response.json();
-        console.log('Received data:', jsonData);
         setData(jsonData.data);
       } catch (err) {
         console.error('API error:', err);
